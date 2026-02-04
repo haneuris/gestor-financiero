@@ -596,12 +596,12 @@ const SEED = {
     { id: 'graph_12', title: 'Edificio Clemente', linkedClientId: 'proj_12' }
   ],
   recurring: [
-    { id: 'rec_1', name: 'Disney Plus', amount: 12, day: 9, cat: 'Entretenimiento' },
-    { id: 'rec_2', name: 'Amazon Prime', amount: 17, day: 27, cat: 'Entretenimiento' },
-    { id: 'rec_3', name: 'Spectrum', amount: 30, day: 21, cat: 'Servicios' },
-    { id: 'rec_4', name: 'Hipoteca Orlando', amount: 2253, day: 18, cat: 'Hogar' },
-    { id: 'rec_5', name: 'Duke Energy', amount: 300, day: 2, cat: 'Hogar' },
-    { id: 'rec_6', name: 'T-Mobile', amount: 281, day: 3, cat: 'Hogar' }
+    { id: 'rec_1', name: 'Disney Plus', amount: 12, day: 9, cat: 'Entretenimiento', accountId: 'acc_1' },
+    { id: 'rec_2', name: 'Amazon Prime', amount: 17, day: 27, cat: 'Entretenimiento', accountId: 'acc_1' },
+    { id: 'rec_3', name: 'Spectrum', amount: 30, day: 21, cat: 'Servicios', accountId: 'acc_1' },
+    { id: 'rec_4', name: 'Hipoteca Orlando', amount: 2253, day: 18, cat: 'Hogar', accountId: 'acc_1' },
+    { id: 'rec_5', name: 'Duke Energy', amount: 300, day: 2, cat: 'Hogar', accountId: 'acc_1' },
+    { id: 'rec_6', name: 'T-Mobile', amount: 281, day: 3, cat: 'Hogar', accountId: 'acc_1' }
   ],
   transactions: [] // Histórico
 };
@@ -638,6 +638,11 @@ function loadState() {
       }
   });
   
+  // Migration: Ensure recurring has accountId
+  data.recurring.forEach(r => {
+      if(!r.accountId) r.accountId = data.accounts[0].id;
+  });
+
   return data;
 }
 function saveState() {
@@ -721,7 +726,7 @@ function renderAll() {
 
   renderCharts(metrics.monthlyTxs, year);
   renderProjects(year);
-  renderClientAnalysis(year); // New Render Function
+  renderClientAnalysis(year); 
   renderAccounts(getAccountBalances());
   renderTransactions(metrics.monthlyTxs);
   renderRecurring();
@@ -855,22 +860,23 @@ function renderClientAnalysis(year) {
 
     state.clientGraphs.forEach(graph => {
         // Encontrar pagos relacionados
-        // 1. Si el proyecto existe, usamos sus payments
-        // 2. Si el proyecto fue borrado, buscamos en transacciones históricas por descripción/match
         let payments = [];
         
-        // Strategy: Combine active project payments AND archived transactions matching name
         const activeProj = state.projects.find(p => p.id === graph.linkedClientId);
         
         if (activeProj) {
             payments = activeProj.payments.filter(pay => pay.date.startsWith(year));
         } else {
-            // Fallback for deleted projects
-            payments = state.transactions.filter(t => 
-                t.date.startsWith(year) && 
-                t.type === 'income' && 
-                (t.description.includes(graph.title.split('-')[0].trim()) || (activeProj && t.description.includes(activeProj.client)))
-            ).map(t => ({ date: t.date, amount: t.amount }));
+            // Fallback for deleted projects using projectId (Strong Linking)
+            payments = state.transactions.filter(t => {
+                if (!t.date.startsWith(year) || t.type !== 'income') return false;
+                
+                // 1. Match by ID (Best)
+                if (t.projectId && t.projectId === graph.linkedClientId) return true;
+                
+                // 2. Legacy Match by Description (Fallback)
+                return t.description.includes(graph.title.split('-')[0].trim());
+            }).map(t => ({ date: t.date, amount: t.amount }));
         }
 
         // Generate Data Points
@@ -961,11 +967,23 @@ function renderTransactions(txs) {
       ${txs.length === 0 ? '<tr><td colspan="7" class="text-center" style="padding:20px">Sin movimientos este mes</td></tr>' : ''}
       ${txs.map(tx => {
         const acc = state.accounts.find(a => a.id === tx.accountId);
+        
+        // DYNAMIC LINKING for Project Names
+        let displayName = tx.description;
+        if(tx.projectId) {
+            const linkedProj = state.projects.find(p => p.id === tx.projectId);
+            if(linkedProj) {
+                // Determine if it's an adjustment or payment to show better text
+                const prefix = tx.description.includes("Ajuste") ? "Ajuste Saldo" : "Pago";
+                displayName = `${prefix}: ${linkedProj.client} - ${linkedProj.name}`;
+            }
+        }
+
         return `
         <tr>
           <td>${formatDate(tx.date)}</td>
           <td><span class="badge ${tx.type==='income'?'green':tx.type==='expense'?'red':'blue'}">${tx.type==='income'?'Ingreso':tx.type==='expense'?'Gasto':'Transf'}</span></td>
-          <td>${tx.description}</td>
+          <td>${displayName}</td>
           <td><span style="font-size:11px; background:#f3f4f6; padding:2px 6px; border-radius:4px">${tx.category||'General'}</span></td>
           <td>${acc ? acc.name : '-'}</td>
           <td class="text-right amount ${tx.type==='income'?'pos':'neg'}">${formatMoney(tx.amount)}</td>
@@ -978,15 +996,21 @@ function renderTransactions(txs) {
 
 function renderRecurring() {
   const list = document.getElementById('recurringList');
-  list.innerHTML = state.recurring.map(r => `
+  list.innerHTML = state.recurring.map(r => {
+    const acc = state.accounts.find(a => a.id === r.accountId);
+    return `
     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--bg)">
        <div>
           <div style="font-weight:600">${r.name}</div>
           <div style="font-size:12px; color:var(--text-muted)">Día ${r.day} del mes • ${r.cat}</div>
+          <div style="font-size:11px; color:var(--brand); margin-top:2px"><i class="ri-bank-card-line"></i> ${acc ? acc.name : 'Sin Asignar'}</div>
        </div>
-       <div class="amount neg">${formatMoney(r.amount)}</div>
+       <div style="text-align:right">
+          <div class="amount neg">${formatMoney(r.amount)}</div>
+          <button class="btn sm" onclick="editRecurring('${r.id}')" style="margin-top:5px; padding:2px 6px; font-size:10px">Editar</button>
+       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 // --- INITIALIZATION ---
@@ -1167,7 +1191,7 @@ async function addProject() {
         const date = new Date().toISOString().slice(0,10);
         newProj.payments.push({ id: uid(), amount: initialPay, date: date });
         
-        // Create Transaction
+        // Create Transaction with Project ID
         state.transactions.push({
             id: uid(),
             date: date,
@@ -1175,7 +1199,8 @@ async function addProject() {
             amount: initialPay,
             accountId: state.accounts[0].id, // Default to first for initial
             category: 'Proyectos',
-            description: `Pago Inicial: ${res.client} - ${res.name}`
+            description: `Pago Inicial: ${res.client} - ${res.name}`,
+            projectId: newId // LINKING
         });
     }
 
@@ -1247,6 +1272,12 @@ async function editProject(id) {
       p.totalFee = Number(res.fee);
       p.notes = res.notes;
 
+      // UPDATE GRAPH TITLE if exists
+      const graph = state.clientGraphs.find(g => g.linkedClientId === id);
+      if(graph) {
+          graph.title = `${res.client} - ${res.name}`;
+      }
+
       // Handle Total Paid Adjustment
       const newPaidTotal = Number(res.paidTotal);
       const diff = newPaidTotal - currentTotalPaid;
@@ -1256,7 +1287,7 @@ async function editProject(id) {
           // Add adjustment payment
           p.payments.push({ id: uid(), amount: diff, date: date });
           
-          // Add adjustment transaction
+          // Add adjustment transaction with ID
           state.transactions.push({
               id: uid(),
               date: date,
@@ -1264,7 +1295,8 @@ async function editProject(id) {
               amount: diff, // Can be negative if reducing paid amount
               accountId: state.accounts[0].id, // Default acc
               category: 'Ajuste Manual',
-              description: `Ajuste Saldo: ${p.client}`
+              description: `Ajuste Saldo: ${p.client}`,
+              projectId: p.id // LINKING
           });
       }
 
@@ -1314,7 +1346,8 @@ async function addPayment(projId) {
         amount: Number(res.amount),
         accountId: res.acc,
         category: 'Proyectos',
-        description: `Pago: ${p.client} - ${p.name}`
+        description: `Pago: ${p.client} - ${p.name}`,
+        projectId: p.id // LINKING
       });
     }
     saveState();
@@ -1379,6 +1412,114 @@ async function showTxModal() {
   }
 }
 
+async function addRecurring() {
+  const html = `
+    <h3>Nuevo Gasto Recurrente</h3>
+    <div class="input-group">
+       <label class="input-label">Nombre / Concepto</label>
+       <input class="input" id="rName" placeholder="Ej. Netflix">
+    </div>
+    <div class="grid-2">
+       <div class="input-group">
+         <label class="input-label">Monto Mensual</label>
+         <input type="number" class="input" id="rAmount">
+       </div>
+       <div class="input-group">
+         <label class="input-label">Día del mes (1-31)</label>
+         <input type="number" class="input" id="rDay" max="31">
+       </div>
+    </div>
+    <div class="input-group">
+       <label class="input-label">Categoría</label>
+       <input class="input" id="rCat" placeholder="Ej. Entretenimiento">
+    </div>
+    <div class="input-group">
+       <label class="input-label">Cuenta de Cargo</label>
+       <select class="input" id="rAcc">
+          ${state.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+       </select>
+    </div>
+    <div class="text-right">
+       <button class="btn" onclick="closeModal(null)">Cancelar</button>
+       <button class="btn primary" onclick="closeModal({
+          name: document.getElementById('rName').value,
+          amount: document.getElementById('rAmount').value,
+          day: document.getElementById('rDay').value,
+          cat: document.getElementById('rCat').value,
+          acc: document.getElementById('rAcc').value
+       })">Crear</button>
+    </div>
+  `;
+  const res = await Modal.show(html);
+  if(res && res.name) {
+      state.recurring.push({
+          id: uid(),
+          name: res.name,
+          amount: Number(res.amount),
+          day: Number(res.day),
+          cat: res.cat,
+          accountId: res.acc
+      });
+      saveState();
+  }
+}
+
+async function editRecurring(id) {
+  const r = state.recurring.find(x => x.id === id);
+  if(!r) return;
+
+  const html = `
+    <h3>Editar Gasto Recurrente</h3>
+    <div class="input-group">
+       <label class="input-label">Nombre / Concepto</label>
+       <input class="input" id="rName" value="${r.name}">
+    </div>
+    <div class="grid-2">
+       <div class="input-group">
+         <label class="input-label">Monto Mensual</label>
+         <input type="number" class="input" id="rAmount" value="${r.amount}">
+       </div>
+       <div class="input-group">
+         <label class="input-label">Día del mes (1-31)</label>
+         <input type="number" class="input" id="rDay" value="${r.day}" max="31">
+       </div>
+    </div>
+    <div class="input-group">
+       <label class="input-label">Categoría</label>
+       <input class="input" id="rCat" value="${r.cat}">
+    </div>
+    <div class="input-group">
+       <label class="input-label">Cuenta de Cargo</label>
+       <select class="input" id="rAcc">
+          ${state.accounts.map(a => `<option value="${a.id}" ${a.id === r.accountId ? 'selected' : ''}>${a.name}</option>`).join('')}
+       </select>
+    </div>
+    <div class="text-right">
+       <button class="btn danger" onclick="closeModal('delete')" style="float:left">Borrar</button>
+       <button class="btn" onclick="closeModal(null)">Cancelar</button>
+       <button class="btn primary" onclick="closeModal({
+          name: document.getElementById('rName').value,
+          amount: document.getElementById('rAmount').value,
+          day: document.getElementById('rDay').value,
+          cat: document.getElementById('rCat').value,
+          acc: document.getElementById('rAcc').value
+       })">Guardar</button>
+    </div>
+  `;
+  const res = await Modal.show(html);
+  if(res === 'delete') {
+      state.recurring = state.recurring.filter(x => x.id !== id);
+      saveState();
+  } else if(res && res.name) {
+      r.name = res.name;
+      r.amount = Number(res.amount);
+      r.day = Number(res.day);
+      r.cat = res.cat;
+      r.accountId = res.acc;
+      saveState();
+  }
+}
+
 function deleteProject(id) {
   if(!confirm('¿Eliminar proyecto de la lista activa? (La gráfica se conservará en Análisis)')) return;
   state.projects = state.projects.filter(p => p.id !== id);
@@ -1405,12 +1546,15 @@ function applyRecurring() {
   if(!confirm(`¿Generar ${count} transacciones de gastos recurrentes para este mes?`)) return;
   
   state.recurring.forEach(r => {
+    // Check if valid account exists, else use default
+    const targetAcc = state.accounts.find(a => a.id === r.accountId) ? r.accountId : state.accounts[0].id;
+    
     state.transactions.push({
       id: uid(),
       date: `${year}-${String(month).padStart(2,'0')}-${String(r.day).padStart(2,'0')}`,
       type: 'expense',
       amount: r.amount,
-      accountId: state.accounts[0].id, 
+      accountId: targetAcc, 
       category: r.cat,
       description: r.name
     });
