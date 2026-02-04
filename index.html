@@ -839,6 +839,7 @@ function renderProjects(year) {
   document.getElementById('projPending').innerText = formatMoney(totalP - totalC);
 }
 
+// NUEVA FUNCIÓN: Renderiza las gráficas en su propia pestaña
 function renderClientAnalysis(year) {
     const container = document.getElementById('clientChartsList');
     container.innerHTML = '';
@@ -848,32 +849,47 @@ function renderClientAnalysis(year) {
         return;
     }
 
+    const selectedYearInt = parseInt(year);
+
     state.clientGraphs.forEach(graph => {
+        // Encontrar pagos relacionados
         let payments = [];
         
         const activeProj = state.projects.find(p => p.id === graph.linkedClientId);
         
+        // Retrieve ALL payments regardless of date to calculate prior history
         if (activeProj) {
-            payments = activeProj.payments.filter(pay => pay.date.startsWith(year));
+            payments = activeProj.payments;
         } else {
+            // Fallback for deleted projects
             payments = state.transactions.filter(t => {
-                if (!t.date.startsWith(year) || t.type !== 'income') return false;
+                if (t.type !== 'income') return false;
                 
+                // Match by ID or Name
                 if (t.projectId && t.projectId === graph.linkedClientId) return true;
-                
                 return t.description.includes(graph.title.split('-')[0].trim());
             }).map(t => ({ date: t.date, amount: t.amount }));
         }
 
+        // Calculate Prior Balance (Previous Years)
+        let priorBalance = 0;
         const monthlyRaw = Array(12).fill(0);
+
         payments.forEach(pay => {
-            const m = parseInt(pay.date.split('-')[1]) - 1;
-            monthlyRaw[m] += Number(pay.amount);
+            const payYear = parseInt(pay.date.split('-')[0]);
+            if (payYear < selectedYearInt) {
+                priorBalance += Number(pay.amount);
+            } else if (payYear === selectedYearInt) {
+                const m = parseInt(pay.date.split('-')[1]) - 1;
+                if(m >= 0 && m < 12) monthlyRaw[m] += Number(pay.amount);
+            }
         });
         
-        let acc = 0;
+        // Generate Cumulative Data Points
+        let acc = priorBalance;
         const dataPoints = monthlyRaw.map(val => { acc += val; return acc; });
 
+        // Create Card HTML
         const div = document.createElement('div');
         div.className = 'card';
         div.innerHTML = `
@@ -884,12 +900,14 @@ function renderClientAnalysis(year) {
             <div style="height:200px; width:100%">
                 <canvas id="chart-canvas-${graph.id}"></canvas>
             </div>
-            <div style="font-size:11px; text-align:center; margin-top:10px; color:var(--text-muted)">
-                Acumulado ${year}: <strong>${formatMoney(acc)}</strong>
+            <div style="font-size:11px; text-align:center; margin-top:10px; color:var(--text-muted); display:flex; justify-content:space-between; padding:0 10px">
+                <span>Balance previo (años ant.): <strong>${formatMoney(priorBalance)}</strong></span>
+                <span>Acumulado ${year}: <strong>${formatMoney(acc)}</strong></span>
             </div>
         `;
         container.appendChild(div);
 
+        // Render Chart
         setTimeout(() => {
             const ctx = document.getElementById(`chart-canvas-${graph.id}`);
             if(ctx) {
@@ -910,7 +928,13 @@ function renderClientAnalysis(year) {
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
+                        scales: { 
+                            y: { 
+                                beginAtZero: true,
+                                // Suggest max slightly higher than acc to look good
+                                suggestedMin: priorBalance 
+                            } 
+                        },
                         plugins: { legend: { display: false } }
                     }
                 });
