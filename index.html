@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Gestión Financiera</title>
+  <title>Gestión Financiera - Aneuris Hernandez</title>
 
   <!-- External Libs -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -15,21 +15,21 @@
   <style>
     :root{
       /* Paleta de colores: Estilo Ingeniería/Consultoría (Light Mode) */
-      --bg: #f0f2f5;           /* Fondo gris muy claro */
-      --card: #ffffff;         /* Tarjetas blancas */
-      --card-border: #d1d5db;  /* Bordes sutiles */
+      --bg: #f0f2f5;           
+      --card: #ffffff;         
+      --card-border: #d1d5db;  
       
-      --text-main: #111827;    /* Negro suave */
-      --text-muted: #6b7280;   /* Gris para subtítulos */
+      --text-main: #111827;    
+      --text-muted: #6b7280;   
       
-      --brand: #2563eb;        /* Azul Ingeniería (Primary) */
-      --brand-light: #eff6ff;  /* Azul muy claro */
+      --brand: #2563eb;        
+      --brand-light: #eff6ff;  
       
-      --success: #059669;      /* Verde sólido */
-      --danger: #dc2626;       /* Rojo sólido */
-      --warning: #d97706;      /* Naranja */
+      --success: #059669;      
+      --danger: #dc2626;       
+      --warning: #d97706;      
       
-      --radius: 8px;           /* Bordes profesionales */
+      --radius: 8px;           
       --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
       
       --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -196,7 +196,7 @@
     /* Inputs y Selects */
     .input-group { margin-bottom: 12px; }
     .input-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
-    .input, select {
+    .input, select, textarea {
       width: 100%;
       padding: 8px 12px;
       border: 1px solid var(--card-border);
@@ -206,8 +206,9 @@
       color: var(--text-main);
       outline: none;
       transition: border-color 0.2s;
+      font-family: var(--font-sans);
     }
-    .input:focus, select:focus { border-color: var(--brand); ring: 2px solid var(--brand-light); }
+    .input:focus, select:focus, textarea:focus { border-color: var(--brand); ring: 2px solid var(--brand-light); }
 
     /* Architecture / Flowchart View */
     .arch-flow {
@@ -254,6 +255,11 @@
     .amount { font-family: var(--font-mono); font-weight: 600; }
     .amount.pos { color: var(--success); }
     .amount.neg { color: var(--danger); }
+    .note-box { 
+        background: #f9fafb; border:1px solid #e5e7eb; border-radius:6px; 
+        padding:10px; font-size:12px; color:var(--text-muted); margin-top:10px;
+        white-space: pre-wrap;
+    }
 
     /* Grid Layouts */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -279,6 +285,7 @@
       background: #fff; width: 90%; max-width: 450px;
       padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow);
       transform: translateY(10px); transition: transform 0.2s;
+      max-height: 90vh; overflow-y: auto;
     }
     .modal-overlay.open .modal { transform: translateY(0); }
     .modal h3 { margin-top: 0; color: var(--text-main); }
@@ -307,6 +314,9 @@
       </a>
       <a class="nav-item" onclick="setTab('income', this)">
         <i class="ri-briefcase-line"></i> Clientes & Proyectos
+      </a>
+      <a class="nav-item" onclick="setTab('client-charts', this)">
+        <i class="ri-line-chart-line"></i> Análisis de Clientes
       </a>
       <a class="nav-item" onclick="setTab('transactions', this)">
         <i class="ri-exchange-dollar-line"></i> Transacciones
@@ -337,8 +347,9 @@
     <section id="tab-dashboard">
       <div class="card-header">
         <h2 class="card-title">Arquitectura Financiera</h2>
-        <div>
-           <select class="input" id="monthSelect" onchange="renderAll()" style="width:auto; display:inline-block"></select>
+        <div style="display:flex; gap:10px">
+           <select class="input" id="yearSelect" onchange="updateMonthOptions(); renderAll()" style="width:100px"></select>
+           <select class="input" id="monthSelect" onchange="renderAll()" style="width:140px"></select>
         </div>
       </div>
 
@@ -383,7 +394,7 @@
       <div class="grid-2">
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Tendencia de Flujo (Últimos 6 meses)</h3>
+            <h3 class="card-title">Tendencia de Flujo (Año Seleccionado)</h3>
           </div>
           <canvas id="chartHistory"></canvas>
         </div>
@@ -399,7 +410,7 @@
     <!-- INCOME / PROJECTS TAB -->
     <section id="tab-income" style="display:none">
       <div class="card-header">
-        <h2 class="card-title">Gestión de Clientes y Proyectos</h2>
+        <h2 class="card-title">Gestión de Clientes y Proyectos Activos</h2>
         <button class="btn primary" onclick="addProject()"><i class="ri-add-line"></i> Nuevo Proyecto</button>
       </div>
 
@@ -407,19 +418,33 @@
         <div class="card">
           <div class="arch-label">Total Proyectado</div>
           <div class="arch-val" id="projTotal">$0.00</div>
+          <div style="font-size:11px; color:var(--text-muted)">Suma total de honorarios</div>
         </div>
         <div class="card">
           <div class="arch-label">Cobrado (Real)</div>
           <div class="arch-val" style="color:var(--success)" id="projCollected">$0.00</div>
+          <div style="font-size:11px; color:var(--text-muted)">Pagos recibidos totales</div>
         </div>
         <div class="card">
           <div class="arch-label">Cuentas por Cobrar</div>
           <div class="arch-val" style="color:var(--warning)" id="projPending">$0.00</div>
+          <div style="font-size:11px; color:var(--text-muted)">Honorarios - Pagado</div>
         </div>
       </div>
 
       <div id="projectsList">
         <!-- Project Cards will be injected here -->
+      </div>
+    </section>
+
+    <!-- CLIENT CHARTS TAB -->
+    <section id="tab-client-charts" style="display:none">
+      <div class="card-header">
+        <h2 class="card-title">Histórico Gráfico de Clientes</h2>
+        <p style="font-size:12px; color:var(--text-muted); margin:0">Monitoreo de ingresos acumulados por cliente en el año seleccionado.</p>
+      </div>
+      <div class="grid-2" id="clientChartsList">
+         <!-- Graphs injected here -->
       </div>
     </section>
 
@@ -465,7 +490,7 @@
       </div>
     </section>
 
-    <!-- CONFIG TAB (UPDATED) -->
+    <!-- CONFIG TAB -->
     <section id="tab-config" style="display:none">
       <div class="card">
         <h3 class="card-title" style="margin-bottom:15px">Generación de Reportes e Informes</h3>
@@ -539,26 +564,36 @@ const SEED = {
     { id: 'acc_3', name: 'PNC', type: 'bank', balance: 0 },
     { id: 'acc_4', name: 'Efectivo / Caja Chica', type: 'cash', balance: 0 }
   ],
-  // Proyectos / Clientes
+  // Proyectos / Clientes (Restaurados todos del historial)
   projects: [
-    { 
-      id: 'proj_1', client: 'Edgardo', name: 'Casa Lucera', 
-      totalFee: 4000, 
-      status: 'active',
-      payments: [] 
-    },
-    { 
-      id: 'proj_2', client: 'Edgardo', name: 'Otro Building', 
-      totalFee: 0, 
-      status: 'pending',
-      payments: [] 
-    },
-    { 
-      id: 'proj_3', client: 'Manuel Clemente', name: 'Proyecto Clemente', 
-      totalFee: 0, 
-      status: 'pending',
-      payments: [] 
-    }
+    { id: 'proj_1', client: 'Edgardo', name: 'Casa Lucera', totalFee: 4000, notes: 'Proyecto estructural fase 1', status: 'active', payments: [] },
+    { id: 'proj_2', client: 'Dwight', name: 'Residencia Principal', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_3', client: 'Alan', name: 'Remodelación', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_4', client: 'Adrian', name: 'Consultoría Técnica', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_5', client: 'HBC', name: 'Proyecto Comercial', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_6', client: 'Daniel', name: 'Inspección', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_7', client: 'Jose', name: 'Planos Taller', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_8', client: 'Melina', name: 'Gestión Permisos', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_9', client: 'Escuela', name: 'Estructura Metálica', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_10', client: 'Pergola', name: 'Diseño Exterior', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_11', client: 'Carolina Classic', name: 'Showroom', totalFee: 0, notes: '', status: 'active', payments: [] },
+    { id: 'proj_12', client: 'Edificio Clemente', name: 'Refuerzo Estructural', totalFee: 18000, notes: 'Proyecto mayor', status: 'active', payments: [] }
+  ],
+  // Nueva estructura para persistencia de gráficas (independiente de proyectos activos)
+  // Almacenamos { id, title, linkedClientId (opcional) }
+  clientGraphs: [
+    { id: 'graph_1', title: 'Edgardo - Casa Lucera', linkedClientId: 'proj_1' },
+    { id: 'graph_2', title: 'Dwight - Residencia Principal', linkedClientId: 'proj_2' },
+    { id: 'graph_3', title: 'Alan - Remodelación', linkedClientId: 'proj_3' },
+    { id: 'graph_4', title: 'Adrian - Consultoría Técnica', linkedClientId: 'proj_4' },
+    { id: 'graph_5', title: 'HBC - Proyecto Comercial', linkedClientId: 'proj_5' },
+    { id: 'graph_6', title: 'Daniel - Inspección', linkedClientId: 'proj_6' },
+    { id: 'graph_7', title: 'Jose - Planos Taller', linkedClientId: 'proj_7' },
+    { id: 'graph_8', title: 'Melina - Gestión Permisos', linkedClientId: 'proj_8' },
+    { id: 'graph_9', title: 'Escuela - Estructura Metálica', linkedClientId: 'proj_9' },
+    { id: 'graph_10', title: 'Pergola - Diseño Exterior', linkedClientId: 'proj_10' },
+    { id: 'graph_11', title: 'Carolina Classic - Showroom', linkedClientId: 'proj_11' },
+    { id: 'graph_12', title: 'Edificio Clemente', linkedClientId: 'proj_12' }
   ],
   recurring: [
     { id: 'rec_1', name: 'Disney Plus', amount: 12, day: 9, cat: 'Entretenimiento' },
@@ -572,7 +607,11 @@ const SEED = {
 };
 
 let state = loadState();
-let charts = {}; // Referencias a gráficas
+let charts = {
+  pie: null,
+  hist: null,
+  clientGraphs: {} // Instancias de gráficas
+};
 
 // --- UTILS ---
 const uid = () => Math.random().toString(36).substr(2, 9);
@@ -582,23 +621,36 @@ const formatDate = (d) => new Date(d).toISOString().split('T')[0];
 function loadState() {
   const s = localStorage.getItem('ah_finance_v2');
   let data = s ? JSON.parse(s) : JSON.parse(JSON.stringify(SEED));
-  // Migration: Ensure profile exists if old data
   if(!data.profile) data.profile = JSON.parse(JSON.stringify(SEED.profile));
+  
+  // Migration logic: Ensure all existing projects have a graph
+  if(!data.clientGraphs) data.clientGraphs = [];
+  
+  data.projects.forEach(p => {
+      // Check if this project has a graph
+      const exists = data.clientGraphs.find(g => g.linkedClientId === p.id);
+      if(!exists) {
+          data.clientGraphs.push({
+              id: 'graph_' + p.id,
+              title: `${p.client} - ${p.name}`,
+              linkedClientId: p.id
+          });
+      }
+  });
+  
   return data;
 }
 function saveState() {
   localStorage.setItem('ah_finance_v2', JSON.stringify(state));
-  renderProfile(); // Update Sidebar immediately
+  renderProfile();
   renderAll();
 }
 
 // --- CORE FUNCTIONS ---
 
-// Calcula balances actuales de cuentas
 function getAccountBalances() {
-  // Balance inicial + transacciones
   const bals = {};
-  state.accounts.forEach(a => bals[a.id] = a.balance); // Start balance
+  state.accounts.forEach(a => bals[a.id] = a.balance);
   
   state.transactions.forEach(tx => {
     const amt = Number(tx.amount);
@@ -612,13 +664,12 @@ function getAccountBalances() {
   return bals;
 }
 
-// Datos para gráficas y KPIs
-function getDashboardMetrics(yyyymm) {
-  const [year, month] = yyyymm.split('-');
+function getDashboardMetrics(year, month) {
+  // Filters
   const start = new Date(year, month-1, 1);
   const end = new Date(year, month, 0);
 
-  // Filtrar transacciones del mes
+  // Month Transactions
   const monthlyTxs = state.transactions.filter(t => {
     const d = new Date(t.date);
     return d >= start && d <= end;
@@ -627,14 +678,13 @@ function getDashboardMetrics(yyyymm) {
   const income = monthlyTxs.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
   const expense = monthlyTxs.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
   
-  // Calcular Accounts Receivable (Total)
+  // Accounts Receivable (Global)
   let totalPending = 0;
   state.projects.forEach(p => {
     const paid = p.payments.reduce((s, pay) => s + Number(pay.amount), 0);
     totalPending += (p.totalFee - paid);
   });
 
-  // Balances totales
   const bals = getAccountBalances();
   const totalLiquidity = Object.values(bals).reduce((s,v) => s + v, 0);
 
@@ -657,10 +707,10 @@ function renderProfile() {
 }
 
 function renderAll() {
-  const currentMonth = document.getElementById('monthSelect').value || new Date().toISOString().slice(0,7);
+  const year = document.getElementById('yearSelect').value;
+  const month = document.getElementById('monthSelect').value;
   
-  // 1. Dashboard Metrics
-  const metrics = getDashboardMetrics(currentMonth);
+  const metrics = getDashboardMetrics(year, month);
   
   document.getElementById('flowIn').innerText = formatMoney(metrics.income);
   document.getElementById('flowPool').innerText = formatMoney(metrics.totalLiquidity);
@@ -669,24 +719,16 @@ function renderAll() {
   document.getElementById('flowPendingBadge').innerText = `Por cobrar: ${formatMoney(metrics.totalPending)}`;
   document.getElementById('flowBurnRate').innerText = `Burn: ${formatMoney(metrics.expense)}`;
 
-  // 2. Gráficas
-  renderCharts(metrics.monthlyTxs);
-
-  // 3. Proyectos
-  renderProjects();
-
-  // 4. Cuentas
+  renderCharts(metrics.monthlyTxs, year);
+  renderProjects(year);
+  renderClientAnalysis(year); // New Render Function
   renderAccounts(getAccountBalances());
-
-  // 5. Transacciones
   renderTransactions(metrics.monthlyTxs);
-
-  // 6. Recurring
   renderRecurring();
 }
 
-function renderCharts(txs) {
-  // Chart Pie (Gastos por Categoria)
+function renderCharts(txs, year) {
+  // Pie
   const cats = {};
   txs.filter(t => t.type === 'expense').forEach(t => {
     cats[t.category] = (cats[t.category] || 0) + Number(t.amount);
@@ -703,25 +745,34 @@ function renderCharts(txs) {
     options: { responsive: true, plugins: { legend: { position: 'right' } } }
   });
 
-  // Chart History (Simulado ultimo 6 meses)
-  // En una app real iteraríamos meses atrás. Aquí usamos datos dummy para visualización
-  // o calculamos real si existen datos.
+  // History (Bar Chart for Selected Year)
+  const monthlyIncome = Array(12).fill(0);
+  const monthlyExpense = Array(12).fill(0);
+
+  state.transactions.forEach(t => {
+     if(t.date.startsWith(year)) {
+        const m = parseInt(t.date.split('-')[1]) - 1; // 0-11
+        if(t.type === 'income') monthlyIncome[m] += Number(t.amount);
+        if(t.type === 'expense') monthlyExpense[m] += Number(t.amount);
+     }
+  });
+
   if(charts.hist) charts.hist.destroy();
   const ctxHist = document.getElementById('chartHistory').getContext('2d');
   charts.hist = new Chart(ctxHist, {
     type: 'bar',
     data: {
-      labels: ['M-5', 'M-4', 'M-3', 'M-2', 'M-1', 'Actual'],
+      labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
       datasets: [
-        { label: 'Ingresos', data: [0,0,0,0,0, getDashboardMetrics(document.getElementById('monthSelect').value).income], backgroundColor: '#10b981' },
-        { label: 'Gastos', data: [0,0,0,0,0, getDashboardMetrics(document.getElementById('monthSelect').value).expense], backgroundColor: '#ef4444' }
+        { label: 'Ingresos', data: monthlyIncome, backgroundColor: '#10b981' },
+        { label: 'Gastos', data: monthlyExpense, backgroundColor: '#ef4444' }
       ]
     },
     options: { responsive: true, scales: { x: { grid: {display:false} } } }
   });
 }
 
-function renderProjects() {
+function renderProjects(year) {
   const container = document.getElementById('projectsList');
   container.innerHTML = '';
   
@@ -730,7 +781,6 @@ function renderProjects() {
   state.projects.forEach(p => {
     const paid = p.payments.reduce((s,pay) => s + Number(pay.amount), 0);
     const pending = p.totalFee - paid;
-    
     totalP += Number(p.totalFee);
     totalC += paid;
 
@@ -744,6 +794,7 @@ function renderProjects() {
         </div>
         <div class="text-right">
            <div class="badge ${pending <= 0 ? 'green' : 'orange'}">${pending <= 0 ? 'COMPLETADO' : 'EN PROCESO'}</div>
+           <button class="btn sm" onclick="editProject('${p.id}')" style="margin-left:5px; border:none; background:transparent; color:var(--text-muted)"><i class="ri-edit-2-line"></i></button>
         </div>
       </div>
       
@@ -753,7 +804,7 @@ function renderProjects() {
             <div style="font-weight:600">${formatMoney(p.totalFee)}</div>
          </div>
          <div class="text-center">
-            <div style="font-size:11px; color:var(--text-muted)">Pagado</div>
+            <div style="font-size:11px; color:var(--text-muted)">Pagado (Total)</div>
             <div style="font-weight:600; color:var(--success)">${formatMoney(paid)}</div>
          </div>
          <div class="text-center">
@@ -762,15 +813,21 @@ function renderProjects() {
          </div>
       </div>
 
+      <div style="margin-bottom:15px">
+         <div style="font-size:12px; font-weight:600">Notas / Bitácora</div>
+         <div class="note-box">${p.notes || "Sin notas registradas."}</div>
+      </div>
+
       <div style="margin-bottom:10px">
         <div style="font-size:12px; font-weight:600; margin-bottom:5px">Historial de Pagos</div>
         ${p.payments.length === 0 ? '<div style="font-size:12px; font-style:italic; color:var(--text-muted)">No hay pagos registrados</div>' : ''}
-        ${p.payments.map(pay => `
+        ${p.payments.slice().reverse().slice(0,3).map(pay => `
             <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0; border-bottom:1px solid var(--bg)">
-               <span>${formatDate(pay.date)} <span class="badge green" style="font-size:10px; padding:1px 5px">PAGADO</span></span>
+               <span>${formatDate(pay.date)}</span>
                <span>${formatMoney(pay.amount)}</span>
             </div>
         `).join('')}
+        ${p.payments.length > 3 ? `<div style="text-align:center; font-size:10px; color:var(--text-muted)">+ ${p.payments.length - 3} pagos más...</div>` : ''}
       </div>
 
       <div class="text-right">
@@ -784,6 +841,93 @@ function renderProjects() {
   document.getElementById('projTotal').innerText = formatMoney(totalP);
   document.getElementById('projCollected').innerText = formatMoney(totalC);
   document.getElementById('projPending').innerText = formatMoney(totalP - totalC);
+}
+
+// NUEVA FUNCIÓN: Renderiza las gráficas en su propia pestaña
+function renderClientAnalysis(year) {
+    const container = document.getElementById('clientChartsList');
+    container.innerHTML = '';
+
+    if (!state.clientGraphs || state.clientGraphs.length === 0) {
+        container.innerHTML = `<div style="grid-column:span 2; text-align:center; color:var(--text-muted); padding:40px;">No hay gráficas configuradas. Crea un proyecto para generar una.</div>`;
+        return;
+    }
+
+    state.clientGraphs.forEach(graph => {
+        // Encontrar pagos relacionados
+        // 1. Si el proyecto existe, usamos sus payments
+        // 2. Si el proyecto fue borrado, buscamos en transacciones históricas por descripción/match
+        let payments = [];
+        
+        // Strategy: Combine active project payments AND archived transactions matching name
+        const activeProj = state.projects.find(p => p.id === graph.linkedClientId);
+        
+        if (activeProj) {
+            payments = activeProj.payments.filter(pay => pay.date.startsWith(year));
+        } else {
+            // Fallback for deleted projects
+            payments = state.transactions.filter(t => 
+                t.date.startsWith(year) && 
+                t.type === 'income' && 
+                (t.description.includes(graph.title.split('-')[0].trim()) || (activeProj && t.description.includes(activeProj.client)))
+            ).map(t => ({ date: t.date, amount: t.amount }));
+        }
+
+        // Generate Data Points
+        const monthlyRaw = Array(12).fill(0);
+        payments.forEach(pay => {
+            const m = parseInt(pay.date.split('-')[1]) - 1;
+            monthlyRaw[m] += Number(pay.amount);
+        });
+        
+        let acc = 0;
+        const dataPoints = monthlyRaw.map(val => { acc += val; return acc; });
+
+        // Create Card HTML
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+            <div class="card-header">
+                <h4 style="margin:0; font-size:14px; color:var(--brand)">${graph.title}</h4>
+                <button class="btn sm danger" onclick="deleteGraph('${graph.id}')" title="Borrar gráfica definitivamente"><i class="ri-delete-bin-line"></i></button>
+            </div>
+            <div style="height:200px; width:100%">
+                <canvas id="chart-canvas-${graph.id}"></canvas>
+            </div>
+            <div style="font-size:11px; text-align:center; margin-top:10px; color:var(--text-muted)">
+                Acumulado ${year}: <strong>${formatMoney(acc)}</strong>
+            </div>
+        `;
+        container.appendChild(div);
+
+        // Render Chart
+        setTimeout(() => {
+            const ctx = document.getElementById(`chart-canvas-${graph.id}`);
+            if(ctx) {
+                if(charts.clientGraphs[graph.id]) charts.clientGraphs[graph.id].destroy();
+                charts.clientGraphs[graph.id] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+                        datasets: [{
+                            label: 'Cobrado Acumulado',
+                            data: dataPoints,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }, 0);
+    });
 }
 
 function renderAccounts(balances) {
@@ -847,22 +991,44 @@ function renderRecurring() {
 
 // --- INITIALIZATION ---
 (function init() {
-  // Populate Month Select
-  const sel = document.getElementById('monthSelect');
   const now = new Date();
-  for(let i=0; i<12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-    const val = d.toISOString().slice(0,7);
-    const txt = d.toLocaleDateString('es-ES', { month:'long', year:'numeric' });
-    const opt = document.createElement('option');
-    opt.value = val;
-    opt.innerText = txt.charAt(0).toUpperCase() + txt.slice(1);
-    sel.appendChild(opt);
-  }
   
-  renderProfile(); // Load profile name
-  renderAll();     // Load dashboard
+  // Populate Year Select (Current - 5 to Current + 2)
+  const yearSel = document.getElementById('yearSelect');
+  const currYear = now.getFullYear();
+  for(let y = currYear - 5; y <= currYear + 2; y++) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.innerText = y;
+      if(y === currYear) opt.selected = true;
+      yearSel.appendChild(opt);
+  }
+
+  // Populate Month Select logic is now dynamic
+  updateMonthOptions();
+  
+  renderProfile(); 
+  renderAll();     
 })();
+
+function updateMonthOptions() {
+    const sel = document.getElementById('monthSelect');
+    const oldVal = sel.value;
+    sel.innerHTML = "";
+    
+    // Always show 12 months for the selected year
+    const names = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    
+    names.forEach((name, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx + 1; // 1-12
+        opt.innerText = name;
+        // Default to current month if in current year
+        const now = new Date();
+        if(idx === now.getMonth()) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
 
 /**
  * ------------------------------------------------------------------
@@ -941,38 +1107,168 @@ async function editProfile() {
 async function addProject() {
   const html = `
     <h3>Nuevo Proyecto / Cliente</h3>
-    <div class="input-group">
-       <label class="input-label">Nombre del Cliente</label>
-       <input class="input" id="pClient" placeholder="Ej. Edgardo">
+    <div class="grid-2">
+        <div class="input-group">
+           <label class="input-label">Nombre del Cliente</label>
+           <input class="input" id="pClient" placeholder="Ej. Edgardo">
+        </div>
+        <div class="input-group">
+           <label class="input-label">Nombre del Proyecto</label>
+           <input class="input" id="pName" placeholder="Ej. Casa Lucera">
+        </div>
+    </div>
+    <div class="grid-2">
+        <div class="input-group">
+           <label class="input-label">Honorarios Totales ($)</label>
+           <input class="input" type="number" id="pFee" placeholder="0.00">
+        </div>
+        <div class="input-group">
+           <label class="input-label">Monto Pagado Inicial ($)</label>
+           <input class="input" type="number" id="pPaid" placeholder="0.00">
+        </div>
     </div>
     <div class="input-group">
-       <label class="input-label">Nombre del Proyecto</label>
-       <input class="input" id="pName" placeholder="Ej. Casa Lucera">
+        <label class="input-label">Notas / Bitácora del Cliente</label>
+        <textarea class="input" id="pNotes" rows="3" placeholder="Información técnica, pendientes, etc..."></textarea>
     </div>
-    <div class="input-group">
-       <label class="input-label">Honorarios Totales ($)</label>
-       <input class="input" type="number" id="pFee" placeholder="0.00">
+    <div style="background:#f3f4f6; padding:10px; border-radius:6px; margin-bottom:15px; font-size:12px">
+       <span id="calcPending">Pendiente Calculado: $0.00</span>
     </div>
     <div class="text-right">
        <button class="btn" onclick="closeModal(null)">Cancelar</button>
        <button class="btn primary" onclick="closeModal({
          client: document.getElementById('pClient').value,
          name: document.getElementById('pName').value,
-         fee: document.getElementById('pFee').value
+         fee: document.getElementById('pFee').value,
+         paid: document.getElementById('pPaid').value,
+         notes: document.getElementById('pNotes').value
        })">Crear Proyecto</button>
     </div>
   `;
   const res = await Modal.show(html);
   if(res && res.client) {
-    state.projects.push({
-      id: uid(),
+    const newId = uid();
+    const fee = Number(res.fee);
+    const initialPay = Number(res.paid || 0);
+
+    const newProj = {
+      id: newId,
       client: res.client,
       name: res.name,
-      totalFee: Number(res.fee),
+      totalFee: fee,
+      notes: res.notes,
       status: 'active',
       payments: []
+    };
+
+    // Handle initial payment logic
+    if(initialPay > 0) {
+        // Add payment
+        const date = new Date().toISOString().slice(0,10);
+        newProj.payments.push({ id: uid(), amount: initialPay, date: date });
+        
+        // Create Transaction
+        state.transactions.push({
+            id: uid(),
+            date: date,
+            type: 'income',
+            amount: initialPay,
+            accountId: state.accounts[0].id, // Default to first for initial
+            category: 'Proyectos',
+            description: `Pago Inicial: ${res.client} - ${res.name}`
+        });
+    }
+
+    state.projects.push(newProj);
+    
+    // AUTO CREATE CHART for this new client
+    if(!state.clientGraphs) state.clientGraphs = [];
+    state.clientGraphs.push({
+        id: uid(),
+        title: `${res.client} - ${res.name}`,
+        linkedClientId: newId
     });
+
     saveState();
+  }
+}
+
+async function editProject(id) {
+  const p = state.projects.find(x => x.id === id);
+  if(!p) return;
+
+  // Calculate total paid so far
+  const currentTotalPaid = p.payments.reduce((s, pay) => s + Number(pay.amount), 0);
+
+  const html = `
+    <h3>Editar Proyecto: ${p.client}</h3>
+    <div class="grid-2">
+        <div class="input-group">
+           <label class="input-label">Nombre del Cliente</label>
+           <input class="input" id="eClient" value="${p.client}">
+        </div>
+        <div class="input-group">
+           <label class="input-label">Nombre del Proyecto</label>
+           <input class="input" id="eName" value="${p.name}">
+        </div>
+    </div>
+    <div class="grid-2">
+        <div class="input-group">
+           <label class="input-label">Honorarios Totales ($)</label>
+           <input class="input" type="number" id="eFee" value="${p.totalFee}">
+        </div>
+        <div class="input-group">
+           <label class="input-label">Total Pagado (Ajuste Manual)</label>
+           <input class="input" type="number" id="ePaidTotal" value="${currentTotalPaid}">
+        </div>
+    </div>
+    <div class="input-group">
+        <label class="input-label">Notas / Bitácora</label>
+        <textarea class="input" id="eNotes" rows="4">${p.notes || ""}</textarea>
+    </div>
+    <div style="background:#fff3cd; padding:10px; border-radius:6px; margin-bottom:15px; font-size:11px; color:#856404">
+       <i class="ri-alert-line"></i> Nota: Modificar el "Total Pagado" creará automáticamente una transacción de ajuste para cuadrar el balance.
+    </div>
+    <div class="text-right">
+       <button class="btn" onclick="closeModal(null)">Cancelar</button>
+       <button class="btn primary" onclick="closeModal({
+         client: document.getElementById('eClient').value,
+         name: document.getElementById('eName').value,
+         fee: document.getElementById('eFee').value,
+         paidTotal: document.getElementById('ePaidTotal').value,
+         notes: document.getElementById('eNotes').value
+       })">Guardar Cambios</button>
+    </div>
+  `;
+  const res = await Modal.show(html);
+  if(res) {
+      p.client = res.client;
+      p.name = res.name;
+      p.totalFee = Number(res.fee);
+      p.notes = res.notes;
+
+      // Handle Total Paid Adjustment
+      const newPaidTotal = Number(res.paidTotal);
+      const diff = newPaidTotal - currentTotalPaid;
+
+      if (diff !== 0) {
+          const date = new Date().toISOString().slice(0,10);
+          // Add adjustment payment
+          p.payments.push({ id: uid(), amount: diff, date: date });
+          
+          // Add adjustment transaction
+          state.transactions.push({
+              id: uid(),
+              date: date,
+              type: 'income',
+              amount: diff, // Can be negative if reducing paid amount
+              accountId: state.accounts[0].id, // Default acc
+              category: 'Ajuste Manual',
+              description: `Ajuste Saldo: ${p.client}`
+          });
+      }
+
+      saveState();
   }
 }
 
@@ -1084,8 +1380,14 @@ async function showTxModal() {
 }
 
 function deleteProject(id) {
-  if(!confirm('¿Eliminar proyecto y su historial?')) return;
+  if(!confirm('¿Eliminar proyecto de la lista activa? (La gráfica se conservará en Análisis)')) return;
   state.projects = state.projects.filter(p => p.id !== id);
+  saveState();
+}
+
+function deleteGraph(id) {
+  if(!confirm('¿Eliminar esta gráfica y su historial visual?')) return;
+  state.clientGraphs = state.clientGraphs.filter(g => g.id !== id);
   saveState();
 }
 
@@ -1096,19 +1398,19 @@ function deleteTx(id) {
 }
 
 function applyRecurring() {
+  const year = document.getElementById('yearSelect').value;
   const month = document.getElementById('monthSelect').value;
   const count = state.recurring.length;
-  // Simple logic: add them as pending transactions for the selected month
-  // For now, let's just add them as expenses dated the 1st of month
+  
   if(!confirm(`¿Generar ${count} transacciones de gastos recurrentes para este mes?`)) return;
   
   state.recurring.forEach(r => {
     state.transactions.push({
       id: uid(),
-      date: `${month}-${String(r.day).padStart(2,'0')}`,
+      date: `${year}-${String(month).padStart(2,'0')}-${String(r.day).padStart(2,'0')}`,
       type: 'expense',
       amount: r.amount,
-      accountId: state.accounts[0].id, // Default to first account
+      accountId: state.accounts[0].id, 
       category: r.cat,
       description: r.name
     });
@@ -1173,13 +1475,13 @@ function exportToExcel() {
 
 // Export to Fake Word (HTML Doc)
 function exportToWord() {
-  const monthSel = document.getElementById('monthSelect');
-  const monthText = monthSel.options[monthSel.selectedIndex].text;
-  const monthVal = monthSel.value;
+  const year = document.getElementById('yearSelect').value;
+  const month = document.getElementById('monthSelect').value;
+  const monthText = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
   
-  const metrics = getDashboardMetrics(monthVal);
+  const metrics = getDashboardMetrics(year, month);
   const txs = metrics.monthlyTxs;
-  const companyName = state.profile.name; // Use editable name
+  const companyName = state.profile.name; 
 
   const htmlDoc = `
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -1197,7 +1499,7 @@ function exportToWord() {
       <div class="header">
         <h1>Reporte Financiero Mensual</h1>
         <h3>${companyName}</h3>
-        <p>Periodo: ${monthText}</p>
+        <p>Periodo: ${monthText} ${year}</p>
       </div>
 
       <div class="summary">
@@ -1236,7 +1538,7 @@ function exportToWord() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `Reporte_Mensual_${monthVal}.doc`;
+  link.download = `Reporte_${year}_${month}.doc`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
