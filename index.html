@@ -551,7 +551,7 @@
  * ------------------------------------------------------------------
  */
 
-// --- SEED DATA (Base de datos inicial) ---
+// --- SEED DATA (Base de datos inicial COMPLETA) ---
 const SEED = {
   meta: { created: new Date().toISOString() },
   profile: {
@@ -560,12 +560,12 @@ const SEED = {
   },
   accounts: [
     { id: 'acc_1', name: 'OneFirstBank', type: 'bank', balance: 0 },
-    { id: 'acc_2', name: 'Oriental', type: 'bank', balance: 0 },
-    { id: 'acc_3', name: 'PNC', type: 'bank', balance: 0 },
+    { id: 'acc_2', name: 'Oriental', type: 'bank', balance: 2706 },
+    { id: 'acc_3', name: 'PNC', type: 'bank', balance: 3300 },
     { id: 'acc_4', name: 'Regions', type: 'bank', balance: 0 },
     { id: 'acc_5', name: 'Efectivo / Caja Chica', type: 'cash', balance: 0 }
   ],
-  // Proyectos / Clientes (Restaurados todos del historial)
+  // Proyectos / Clientes (Datos extraidos de Organizacion.xlsx)
   projects: [
     { id: 'proj_1', client: 'Edgardo', name: 'Casa Lucera', totalFee: 4000, notes: 'Proyecto estructural fase 1', status: 'active', payments: [] },
     { id: 'proj_2', client: 'Dwight', name: 'Residencia Principal', totalFee: 0, notes: '', status: 'active', payments: [] },
@@ -575,27 +575,14 @@ const SEED = {
     { id: 'proj_6', client: 'Daniel', name: 'Inspección', totalFee: 0, notes: '', status: 'active', payments: [] },
     { id: 'proj_7', client: 'Jose', name: 'Planos Taller', totalFee: 0, notes: '', status: 'active', payments: [] },
     { id: 'proj_8', client: 'Melina', name: 'Gestión Permisos', totalFee: 0, notes: '', status: 'active', payments: [] },
-    { id: 'proj_9', client: 'Escuela', name: 'Estructura Metálica', totalFee: 0, notes: '', status: 'active', payments: [] },
-    { id: 'proj_10', client: 'Pergola', name: 'Diseño Exterior', totalFee: 0, notes: '', status: 'active', payments: [] },
-    { id: 'proj_11', client: 'Carolina Classic', name: 'Showroom', totalFee: 0, notes: '', status: 'active', payments: [] },
-    { id: 'proj_12', client: 'Edificio Clemente', name: 'Refuerzo Estructural', totalFee: 18000, notes: 'Proyecto mayor', status: 'active', payments: [] }
+    { id: 'proj_9', client: 'Escuela', name: 'Estructura Metálica', totalFee: 1500, notes: 'Melina Pendiente Pagar', status: 'active', payments: [] },
+    { id: 'proj_10', client: 'Pergola', name: 'Diseño Exterior', totalFee: 250, notes: '', status: 'active', payments: [] },
+    { id: 'proj_11', client: 'Carolina Classic', name: 'Showroom', totalFee: 1000, notes: '', status: 'active', payments: [] },
+    { id: 'proj_12', client: 'Edificio Clemente', name: 'Refuerzo Estructural', totalFee: 18000, notes: 'Proyecto mayor. Por cobrar 11,000 pendiente.', status: 'active', payments: [] },
+    { id: 'proj_13', client: 'Manuel Clemente', name: 'Proyecto Clemente', totalFee: 0, notes: 'No started', status: 'pending', payments: [] }
   ],
-  // Nueva estructura para persistencia de gráficas (independiente de proyectos activos)
-  // Almacenamos { id, title, linkedClientId (opcional) }
-  clientGraphs: [
-    { id: 'graph_1', title: 'Edgardo - Casa Lucera', linkedClientId: 'proj_1' },
-    { id: 'graph_2', title: 'Dwight - Residencia Principal', linkedClientId: 'proj_2' },
-    { id: 'graph_3', title: 'Alan - Remodelación', linkedClientId: 'proj_3' },
-    { id: 'graph_4', title: 'Adrian - Consultoría Técnica', linkedClientId: 'proj_4' },
-    { id: 'graph_5', title: 'HBC - Proyecto Comercial', linkedClientId: 'proj_5' },
-    { id: 'graph_6', title: 'Daniel - Inspección', linkedClientId: 'proj_6' },
-    { id: 'graph_7', title: 'Jose - Planos Taller', linkedClientId: 'proj_7' },
-    { id: 'graph_8', title: 'Melina - Gestión Permisos', linkedClientId: 'proj_8' },
-    { id: 'graph_9', title: 'Escuela - Estructura Metálica', linkedClientId: 'proj_9' },
-    { id: 'graph_10', title: 'Pergola - Diseño Exterior', linkedClientId: 'proj_10' },
-    { id: 'graph_11', title: 'Carolina Classic - Showroom', linkedClientId: 'proj_11' },
-    { id: 'graph_12', title: 'Edificio Clemente', linkedClientId: 'proj_12' }
-  ],
+  // Inicializa vacío, se auto-popula en loadState
+  clientGraphs: [],
   recurring: [
     { id: 'rec_1', name: 'Disney Plus', amount: 12, day: 9, cat: 'Entretenimiento', accountId: 'acc_1' },
     { id: 'rec_2', name: 'Amazon Prime', amount: 17, day: 27, cat: 'Entretenimiento', accountId: 'acc_1' },
@@ -604,14 +591,14 @@ const SEED = {
     { id: 'rec_5', name: 'Duke Energy', amount: 300, day: 2, cat: 'Hogar', accountId: 'acc_1' },
     { id: 'rec_6', name: 'T-Mobile', amount: 281, day: 3, cat: 'Hogar', accountId: 'acc_1' }
   ],
-  transactions: [] // Histórico
+  transactions: [] 
 };
 
 let state = loadState();
 let charts = {
   pie: null,
   hist: null,
-  clientGraphs: {} // Instancias de gráficas
+  clientGraphs: {} 
 };
 
 // --- UTILS ---
@@ -624,11 +611,10 @@ function loadState() {
   let data = s ? JSON.parse(s) : JSON.parse(JSON.stringify(SEED));
   if(!data.profile) data.profile = JSON.parse(JSON.stringify(SEED.profile));
   
-  // Migration logic: Ensure all existing projects have a graph
   if(!data.clientGraphs) data.clientGraphs = [];
   
+  // Ensure every project has a graph entry
   data.projects.forEach(p => {
-      // Check if this project has a graph
       const exists = data.clientGraphs.find(g => g.linkedClientId === p.id);
       if(!exists) {
           data.clientGraphs.push({
@@ -639,7 +625,6 @@ function loadState() {
       }
   });
   
-  // Migration: Ensure recurring has accountId
   data.recurring.forEach(r => {
       if(!r.accountId) r.accountId = data.accounts[0].id;
   });
@@ -671,11 +656,9 @@ function getAccountBalances() {
 }
 
 function getDashboardMetrics(year, month) {
-  // Filters
   const start = new Date(year, month-1, 1);
   const end = new Date(year, month, 0);
 
-  // Month Transactions
   const monthlyTxs = state.transactions.filter(t => {
     const d = new Date(t.date);
     return d >= start && d <= end;
@@ -684,7 +667,6 @@ function getDashboardMetrics(year, month) {
   const income = monthlyTxs.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
   const expense = monthlyTxs.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
   
-  // Accounts Receivable (Global)
   let totalPending = 0;
   state.projects.forEach(p => {
     const paid = p.payments.reduce((s, pay) => s + Number(pay.amount), 0);
@@ -725,16 +707,19 @@ function renderAll() {
   document.getElementById('flowPendingBadge').innerText = `Por cobrar: ${formatMoney(metrics.totalPending)}`;
   document.getElementById('flowBurnRate').innerText = `Burn: ${formatMoney(metrics.expense)}`;
 
-  renderCharts(metrics.monthlyTxs, year);
+  // Solo renderizar si el elemento es visible para ChartJS, si no, se rompe.
+  if(document.getElementById('tab-dashboard').style.display !== 'none') {
+      renderCharts(metrics.monthlyTxs, year);
+  }
+  
   renderProjects(year);
-  renderClientAnalysis(year); 
+  // No llamamos renderClientAnalysis aquí para evitar renderizar en oculto. Se llama en setTab.
   renderAccounts(getAccountBalances());
   renderTransactions(metrics.monthlyTxs);
   renderRecurring();
 }
 
 function renderCharts(txs, year) {
-  // Pie
   const cats = {};
   txs.filter(t => t.type === 'expense').forEach(t => {
     cats[t.category] = (cats[t.category] || 0) + Number(t.amount);
@@ -751,7 +736,6 @@ function renderCharts(txs, year) {
     options: { responsive: true, plugins: { legend: { position: 'right' } } }
   });
 
-  // History (Bar Chart for Selected Year)
   const monthlyIncome = Array(12).fill(0);
   const monthlyExpense = Array(12).fill(0);
 
@@ -855,7 +839,6 @@ function renderProjects(year) {
   document.getElementById('projPending').innerText = formatMoney(totalP - totalC);
 }
 
-// NUEVA FUNCIÓN: Renderiza las gráficas en su propia pestaña
 function renderClientAnalysis(year) {
     const container = document.getElementById('clientChartsList');
     container.innerHTML = '';
@@ -866,7 +849,6 @@ function renderClientAnalysis(year) {
     }
 
     state.clientGraphs.forEach(graph => {
-        // Encontrar pagos relacionados
         let payments = [];
         
         const activeProj = state.projects.find(p => p.id === graph.linkedClientId);
@@ -874,19 +856,15 @@ function renderClientAnalysis(year) {
         if (activeProj) {
             payments = activeProj.payments.filter(pay => pay.date.startsWith(year));
         } else {
-            // Fallback for deleted projects using projectId (Strong Linking)
             payments = state.transactions.filter(t => {
                 if (!t.date.startsWith(year) || t.type !== 'income') return false;
                 
-                // 1. Match by ID (Best)
                 if (t.projectId && t.projectId === graph.linkedClientId) return true;
                 
-                // 2. Legacy Match by Description (Fallback)
                 return t.description.includes(graph.title.split('-')[0].trim());
             }).map(t => ({ date: t.date, amount: t.amount }));
         }
 
-        // Generate Data Points
         const monthlyRaw = Array(12).fill(0);
         payments.forEach(pay => {
             const m = parseInt(pay.date.split('-')[1]) - 1;
@@ -896,7 +874,6 @@ function renderClientAnalysis(year) {
         let acc = 0;
         const dataPoints = monthlyRaw.map(val => { acc += val; return acc; });
 
-        // Create Card HTML
         const div = document.createElement('div');
         div.className = 'card';
         div.innerHTML = `
@@ -913,7 +890,6 @@ function renderClientAnalysis(year) {
         `;
         container.appendChild(div);
 
-        // Render Chart
         setTimeout(() => {
             const ctx = document.getElementById(`chart-canvas-${graph.id}`);
             if(ctx) {
@@ -981,12 +957,10 @@ function renderTransactions(txs) {
       ${txs.map(tx => {
         const acc = state.accounts.find(a => a.id === tx.accountId);
         
-        // DYNAMIC LINKING for Project Names
         let displayName = tx.description;
         if(tx.projectId) {
             const linkedProj = state.projects.find(p => p.id === tx.projectId);
             if(linkedProj) {
-                // Determine if it's an adjustment or payment to show better text
                 const prefix = tx.description.includes("Ajuste") ? "Ajuste Saldo" : "Pago";
                 displayName = `${prefix}: ${linkedProj.client} - ${linkedProj.name}`;
             }
@@ -1030,7 +1004,6 @@ function renderRecurring() {
 (function init() {
   const now = new Date();
   
-  // Populate Year Select (Current - 5 to Current + 2)
   const yearSel = document.getElementById('yearSelect');
   const currYear = now.getFullYear();
   for(let y = currYear - 5; y <= currYear + 2; y++) {
@@ -1041,7 +1014,6 @@ function renderRecurring() {
       yearSel.appendChild(opt);
   }
 
-  // Populate Month Select logic is now dynamic
   updateMonthOptions();
   
   renderProfile(); 
@@ -1053,14 +1025,12 @@ function updateMonthOptions() {
     const oldVal = sel.value;
     sel.innerHTML = "";
     
-    // Always show 12 months for the selected year
     const names = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
     
     names.forEach((name, idx) => {
         const opt = document.createElement('option');
         opt.value = idx + 1; // 1-12
         opt.innerText = name;
-        // Default to current month if in current year
         const now = new Date();
         if(idx === now.getMonth()) opt.selected = true;
         sel.appendChild(opt);
@@ -1082,14 +1052,11 @@ const Modal = {
       overlay.innerHTML = `<div class="modal">${html}</div>`;
       this.root.appendChild(overlay);
       
-      // Focus first input
       const input = overlay.querySelector('input');
       if(input) input.focus();
 
-      // Anim
       requestAnimationFrame(() => overlay.classList.add('open'));
       
-      // Handlers
       window.closeModal = (val) => {
         overlay.classList.remove('open');
         setTimeout(() => { overlay.remove(); resolve(val); }, 200);
@@ -1137,7 +1104,7 @@ async function editProfile() {
   if(res && res.name) {
     state.profile.name = res.name;
     state.profile.subtitle = res.subtitle;
-    saveState(); // Trigger save & render
+    saveState();
   }
 }
 
@@ -1198,32 +1165,26 @@ async function addProject() {
       payments: []
     };
 
-    // Handle initial payment logic
     if(initialPay > 0) {
-        // Add payment
         const payId = uid();
         const date = new Date().toISOString().slice(0,10);
-        
-        // Link Transaction ID to Payment
         const txnId = uid();
         newProj.payments.push({ id: payId, amount: initialPay, date: date, transactionId: txnId });
         
-        // Create Transaction with Project ID
         state.transactions.push({
             id: txnId,
             date: date,
             type: 'income',
             amount: initialPay,
-            accountId: state.accounts[0].id, // Default to first for initial
+            accountId: state.accounts[0].id,
             category: 'Proyectos',
             description: `Pago Inicial: ${res.client} - ${res.name}`,
-            projectId: newId // LINKING
+            projectId: newId
         });
     }
 
     state.projects.push(newProj);
     
-    // AUTO CREATE CHART for this new client
     if(!state.clientGraphs) state.clientGraphs = [];
     state.clientGraphs.push({
         id: uid(),
@@ -1239,7 +1200,6 @@ async function editProject(id) {
   const p = state.projects.find(x => x.id === id);
   if(!p) return;
 
-  // Calculate total paid so far
   const currentTotalPaid = p.payments.reduce((s, pay) => s + Number(pay.amount), 0);
 
   const html = `
@@ -1289,31 +1249,27 @@ async function editProject(id) {
       p.totalFee = Number(res.fee);
       p.notes = res.notes;
 
-      // UPDATE GRAPH TITLE if exists
       const graph = state.clientGraphs.find(g => g.linkedClientId === id);
       if(graph) {
           graph.title = `${res.client} - ${res.name}`;
       }
 
-      // Handle Total Paid Adjustment
       const newPaidTotal = Number(res.paidTotal);
       const diff = newPaidTotal - currentTotalPaid;
 
       if (diff !== 0) {
           const date = new Date().toISOString().slice(0,10);
-          // Add adjustment payment
           p.payments.push({ id: uid(), amount: diff, date: date });
           
-          // Add adjustment transaction with ID
           state.transactions.push({
               id: uid(),
               date: date,
               type: 'income',
-              amount: diff, // Can be negative if reducing paid amount
-              accountId: state.accounts[0].id, // Default acc
+              amount: diff,
+              accountId: state.accounts[0].id,
               category: 'Ajuste Manual',
               description: `Ajuste Saldo: ${p.client}`,
-              projectId: p.id // LINKING
+              projectId: p.id
           });
       }
 
@@ -1352,12 +1308,10 @@ async function addPayment(projId) {
   const res = await Modal.show(html);
   if(res && res.amount) {
     const payId = uid();
-    const txnId = uid(); // Transaction ID to link
+    const txnId = uid(); 
     
-    // 1. Add to project payments
     p.payments.push({ id: payId, amount: res.amount, date: res.date, transactionId: txnId });
     
-    // 2. If account selected, create transaction
     if(res.acc) {
       state.transactions.push({
         id: txnId,
@@ -1367,7 +1321,7 @@ async function addPayment(projId) {
         accountId: res.acc,
         category: 'Proyectos',
         description: `Pago: ${p.client} - ${p.name}`,
-        projectId: p.id // LINKING
+        projectId: p.id
       });
     }
     saveState();
@@ -1403,7 +1357,6 @@ async function editPayment(projId, payId) {
         payment.amount = Number(res.amount);
         payment.date = res.date;
 
-        // Update associated transaction if exists
         if (payment.transactionId) {
             const tx = state.transactions.find(t => t.id === payment.transactionId);
             if (tx) {
@@ -1423,12 +1376,10 @@ function deletePayment(projId, payId) {
 
     const payment = p.payments.find(y => y.id === payId);
     
-    // Remove transaction first
     if (payment && payment.transactionId) {
         state.transactions = state.transactions.filter(t => t.id !== payment.transactionId);
     }
 
-    // Remove payment
     p.payments = p.payments.filter(y => y.id !== payId);
     saveState();
 }
@@ -1720,7 +1671,6 @@ function applyRecurring() {
   if(!confirm(`¿Generar ${count} transacciones de gastos recurrentes para este mes?`)) return;
   
   state.recurring.forEach(r => {
-    // Check if valid account exists, else use default
     const targetAcc = state.accounts.find(a => a.id === r.accountId) ? r.accountId : state.accounts[0].id;
     
     state.transactions.push({
@@ -1737,12 +1687,24 @@ function applyRecurring() {
   alert('Gastos recurrentes aplicados.');
 }
 
-// Navigation
+// FIX: Force render when tab is switched
 function setTab(id, el) {
   document.querySelectorAll('section').forEach(s => s.style.display = 'none');
   document.getElementById('tab-'+id).style.display = 'block';
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if(el) el.classList.add('active');
+  
+  // FIX: Force Chart Redraw if Analysis tab is clicked
+  if(id === 'client-charts') {
+      renderClientAnalysis(document.getElementById('yearSelect').value);
+  }
+  // FIX: Force Main Dashboard Charts redraw too
+  if(id === 'dashboard') {
+      const year = document.getElementById('yearSelect').value;
+      const month = document.getElementById('monthSelect').value;
+      const metrics = getDashboardMetrics(year, month);
+      renderCharts(metrics.monthlyTxs, year);
+  }
 }
 
 // Data Mgmt & Exports
