@@ -1,0 +1,1260 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestión Financiera</title>
+
+  <!-- External Libs -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+  <style>
+    :root{
+      /* Paleta de colores: Estilo Ingeniería/Consultoría (Light Mode) */
+      --bg: #f0f2f5;           /* Fondo gris muy claro */
+      --card: #ffffff;         /* Tarjetas blancas */
+      --card-border: #d1d5db;  /* Bordes sutiles */
+      
+      --text-main: #111827;    /* Negro suave */
+      --text-muted: #6b7280;   /* Gris para subtítulos */
+      
+      --brand: #2563eb;        /* Azul Ingeniería (Primary) */
+      --brand-light: #eff6ff;  /* Azul muy claro */
+      
+      --success: #059669;      /* Verde sólido */
+      --danger: #dc2626;       /* Rojo sólido */
+      --warning: #d97706;      /* Naranja */
+      
+      --radius: 8px;           /* Bordes profesionales */
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout Principal */
+    .app {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    /* Barra Lateral (Sidebar) */
+    aside {
+      background-color: #ffffff;
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    .brand-section {
+      padding: 20px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .brand-header {
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start;
+    }
+    .brand-section h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--brand);
+      margin: 0 0 5px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1.2;
+    }
+    .brand-section p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .edit-profile-btn {
+      background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0 0 0 10px;
+    }
+    .edit-profile-btn:hover { color: var(--brand); }
+
+    .nav-menu {
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+      font-size: 14px;
+      text-decoration: none;
+    }
+    .nav-item:hover {
+      background-color: var(--bg);
+      color: var(--text-main);
+    }
+    .nav-item.active {
+      background-color: var(--brand-light);
+      color: var(--brand);
+      font-weight: 600;
+    }
+    .nav-item i { font-size: 18px; }
+
+    .sidebar-footer {
+      padding: 20px;
+      border-top: 1px solid var(--card-border);
+    }
+
+    /* Área Principal */
+    main {
+      padding: 25px;
+      overflow-y: auto;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Componentes UI Generales */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin: 0;
+    }
+
+    /* Botones */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--card-border);
+      background: #fff;
+      color: var(--text-main);
+      transition: all 0.15s;
+    }
+    .btn:hover { background: var(--bg); }
+    .btn.primary {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+    .btn.primary:hover { background: #1d4ed8; }
+    .btn.danger {
+      color: var(--danger);
+      background: #fff;
+      border-color: #fee2e2;
+    }
+    .btn.danger:hover { background: #fef2f2; }
+    .btn.sm { padding: 6px 10px; font-size: 12px; }
+
+    /* Inputs y Selects */
+    .input-group { margin-bottom: 12px; }
+    .input-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
+    .input, select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      background: #fff;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input:focus, select:focus { border-color: var(--brand); ring: 2px solid var(--brand-light); }
+
+    /* Architecture / Flowchart View */
+    .arch-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .arch-box {
+      background: #fff;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 15px;
+      text-align: center;
+      position: relative;
+    }
+    .arch-box.source { border-top: 4px solid var(--success); }
+    .arch-box.pool { border-top: 4px solid var(--brand); }
+    .arch-box.drain { border-top: 4px solid var(--danger); }
+    
+    .arch-label { font-size: 12px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; font-weight: 600; }
+    .arch-val { font-size: 20px; font-weight: 700; margin: 5px 0; color: var(--text-main); }
+    .arch-arrow { color: var(--card-border); font-size: 24px; display: flex; justify-content: center; }
+
+    /* Tablas */
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 12px; border-bottom: 2px solid var(--bg); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid var(--bg); color: var(--text-main); }
+    tr:last-child td { border-bottom: none; }
+    
+    /* Utilidades */
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .badge {
+      padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    }
+    .badge.green { background: #dcfce7; color: #166534; }
+    .badge.red { background: #fee2e2; color: #991b1b; }
+    .badge.blue { background: #dbeafe; color: #1e40af; }
+    .badge.orange { background: #ffedd5; color: #9a3412; }
+    
+    .amount { font-family: var(--font-mono); font-weight: 600; }
+    .amount.pos { color: var(--success); }
+    .amount.neg { color: var(--danger); }
+
+    /* Grid Layouts */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    
+    @media (max-width: 1024px) {
+      .app { grid-template-columns: 1fr; }
+      aside { height: auto; position: relative; border-right: none; border-bottom: 1px solid var(--card-border); }
+      .arch-flow { grid-template-columns: 1fr; text-align: center; }
+      .arch-arrow { transform: rotate(90deg); margin: -10px 0; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* Modal (Custom) */
+    .modal-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+      display: flex; align-items: center; justify-content: center; z-index: 100;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: #fff; width: 90%; max-width: 450px;
+      padding: 25px; border-radius: var(--radius); box-shadow: var(--shadow);
+      transform: translateY(10px); transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal h3 { margin-top: 0; color: var(--text-main); }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="brand-section">
+      <div class="brand-header">
+         <div>
+            <h1 id="brandName"><i class="ri-building-2-line"></i> A.H. Consulting</h1>
+            <p id="brandTagline">Gestión Financiera Estructural</p>
+         </div>
+         <button class="edit-profile-btn" onclick="editProfile()" title="Editar nombre de empresa">
+           <i class="ri-edit-2-line"></i>
+         </button>
+      </div>
+    </div>
+
+    <nav class="nav-menu">
+      <a class="nav-item active" onclick="setTab('dashboard', this)">
+        <i class="ri-dashboard-line"></i> Resumen General
+      </a>
+      <a class="nav-item" onclick="setTab('income', this)">
+        <i class="ri-briefcase-line"></i> Clientes & Proyectos
+      </a>
+      <a class="nav-item" onclick="setTab('transactions', this)">
+        <i class="ri-exchange-dollar-line"></i> Transacciones
+      </a>
+      <a class="nav-item" onclick="setTab('accounts', this)">
+        <i class="ri-bank-card-line"></i> Cuentas & Activos
+      </a>
+      <a class="nav-item" onclick="setTab('recurring', this)">
+        <i class="ri-calendar-check-line"></i> Gastos Recurrentes
+      </a>
+      <a class="nav-item" onclick="setTab('config', this)">
+        <i class="ri-settings-4-line"></i> Configuración
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px">
+        <i class="ri-database-2-line"></i> Datos: <span id="storageLabel">LocalStorage</span>
+      </div>
+      <button class="btn sm" onclick="resetData()" style="width:100%">Restablecer Datos</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main>
+    
+    <!-- DASHBOARD TAB -->
+    <section id="tab-dashboard">
+      <div class="card-header">
+        <h2 class="card-title">Arquitectura Financiera</h2>
+        <div>
+           <select class="input" id="monthSelect" onchange="renderAll()" style="width:auto; display:inline-block"></select>
+        </div>
+      </div>
+
+      <!-- VISUAL ARCHITECTURE FLOW -->
+      <div class="arch-flow">
+        <!-- Source -->
+        <div class="arch-box source">
+          <div class="arch-label">Fuentes (Clientes)</div>
+          <div class="arch-val" id="flowIn">$0.00</div>
+          <div style="font-size:12px; color:var(--text-muted)">Proyectos cobrados este mes</div>
+          <div style="margin-top:8px">
+             <span class="badge orange" id="flowPendingBadge">Pend: $0</span>
+          </div>
+        </div>
+        
+        <div class="arch-arrow"><i class="ri-arrow-right-line"></i></div>
+
+        <!-- Pool -->
+        <div class="arch-box pool">
+          <div class="arch-label">Repositorio (Cuentas)</div>
+          <div class="arch-val" id="flowPool">$0.00</div>
+          <div style="font-size:12px; color:var(--text-muted)">Liquidez Total Disponible</div>
+          <div style="margin-top:8px; font-size:11px; color:var(--success)">
+            <i class="ri-shield-check-line"></i> Bancos y Efectivo
+          </div>
+        </div>
+
+        <div class="arch-arrow"><i class="ri-arrow-right-line"></i></div>
+
+        <!-- Drain -->
+        <div class="arch-box drain">
+          <div class="arch-label">Salidas (Gastos)</div>
+          <div class="arch-val" id="flowOut">$0.00</div>
+          <div style="font-size:12px; color:var(--text-muted)">Gastos del mes seleccionado</div>
+          <div style="margin-top:8px">
+             <span class="badge red" id="flowBurnRate">Burn Rate</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRAPHS ROW -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Tendencia de Flujo (Últimos 6 meses)</h3>
+          </div>
+          <canvas id="chartHistory"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Desglose de Gastos</h3>
+          </div>
+          <canvas id="chartPie"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- INCOME / PROJECTS TAB -->
+    <section id="tab-income" style="display:none">
+      <div class="card-header">
+        <h2 class="card-title">Gestión de Clientes y Proyectos</h2>
+        <button class="btn primary" onclick="addProject()"><i class="ri-add-line"></i> Nuevo Proyecto</button>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:20px">
+        <div class="card">
+          <div class="arch-label">Total Proyectado</div>
+          <div class="arch-val" id="projTotal">$0.00</div>
+        </div>
+        <div class="card">
+          <div class="arch-label">Cobrado (Real)</div>
+          <div class="arch-val" style="color:var(--success)" id="projCollected">$0.00</div>
+        </div>
+        <div class="card">
+          <div class="arch-label">Cuentas por Cobrar</div>
+          <div class="arch-val" style="color:var(--warning)" id="projPending">$0.00</div>
+        </div>
+      </div>
+
+      <div id="projectsList">
+        <!-- Project Cards will be injected here -->
+      </div>
+    </section>
+
+    <!-- TRANSACTIONS TAB -->
+    <section id="tab-transactions" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Registro de Movimientos</h3>
+          <button class="btn primary" onclick="showTxModal()">
+            <i class="ri-add-line"></i> Agregar Manualmente
+          </button>
+        </div>
+        <div class="table-container">
+          <table id="txTable">
+            <!-- JS populated -->
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCOUNTS TAB -->
+    <section id="tab-accounts" style="display:none">
+      <div class="card-header">
+        <h2 class="card-title">Cuentas y Balances</h2>
+        <button class="btn primary" onclick="addAccount()"><i class="ri-bank-line"></i> Nueva Cuenta</button>
+      </div>
+      <div class="grid-2" id="accountsGrid">
+        <!-- JS populated -->
+      </div>
+    </section>
+
+    <!-- RECURRING TAB -->
+    <section id="tab-recurring" style="display:none">
+      <div class="card-header">
+        <h2 class="card-title">Gastos Fijos y Recurrentes</h2>
+        <div>
+          <button class="btn" onclick="applyRecurring()"><i class="ri-play-list-add-line"></i> Aplicar al Mes Actual</button>
+          <button class="btn primary" onclick="addRecurring()"><i class="ri-add-line"></i> Nuevo Recurrente</button>
+        </div>
+      </div>
+      <div class="card">
+         <div id="recurringList"></div>
+      </div>
+    </section>
+
+    <!-- CONFIG TAB (UPDATED) -->
+    <section id="tab-config" style="display:none">
+      <div class="card">
+        <h3 class="card-title" style="margin-bottom:15px">Generación de Reportes e Informes</h3>
+        <p style="color:var(--text-muted); margin-bottom:25px">
+           Descargue reportes detallados para su archivo personal o para presentar a clientes.
+        </p>
+
+        <div class="grid-2">
+           <!-- Reporte Excel -->
+           <div style="border:1px solid var(--card-border); padding:20px; border-radius:var(--radius); text-align:center">
+              <i class="ri-file-excel-2-line" style="font-size:32px; color:#107c41; display:block; margin-bottom:10px"></i>
+              <h4 style="margin:5px 0 10px 0">Datos en Excel (.csv)</h4>
+              <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px">
+                 Descarga todas las transacciones en formato CSV compatible con Excel para análisis de datos.
+              </p>
+              <button class="btn primary" onclick="exportToExcel()" style="width:100%; justify-content:center">
+                 Descargar Excel
+              </button>
+           </div>
+
+           <!-- Reporte Word -->
+           <div style="border:1px solid var(--card-border); padding:20px; border-radius:var(--radius); text-align:center">
+              <i class="ri-file-word-2-line" style="font-size:32px; color:#2b579a; display:block; margin-bottom:10px"></i>
+              <h4 style="margin:5px 0 10px 0">Reporte Mensual (.doc)</h4>
+              <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px">
+                 Genera un documento formal con el resumen del mes seleccionado y tabla de movimientos.
+              </p>
+              <button class="btn primary" onclick="exportToWord()" style="width:100%; justify-content:center">
+                 Generar Reporte Mensual
+              </button>
+           </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px; border-style:dashed; opacity:0.8">
+        <h3 class="card-title" style="font-size:14px; margin-bottom:10px">Copia de Seguridad (Sistema)</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px">
+           Utilice esta opción para guardar una copia completa de la base de datos (JSON) o restaurarla en otro dispositivo.
+        </p>
+        <div style="display:flex; gap:10px">
+          <button class="btn sm" onclick="exportData()"><i class="ri-download-line"></i> Backup JSON</button>
+          <button class="btn sm" onclick="document.getElementById('importFile').click()"><i class="ri-upload-line"></i> Restaurar JSON</button>
+          <input type="file" id="importFile" hidden accept=".json" onchange="importData(this)">
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODAL ROOT -->
+<div id="modal-root"></div>
+
+<script>
+/**
+ * ------------------------------------------------------------------
+ * LOGICA DE NEGOCIO & DATOS
+ * ------------------------------------------------------------------
+ */
+
+// --- SEED DATA (Base de datos inicial) ---
+const SEED = {
+  meta: { created: new Date().toISOString() },
+  profile: {
+    name: "A.H. Consulting",
+    subtitle: "Gestión Financiera Estructural"
+  },
+  accounts: [
+    { id: 'acc_1', name: 'OneFirstBank', type: 'bank', balance: 0 },
+    { id: 'acc_2', name: 'Oriental', type: 'bank', balance: 0 },
+    { id: 'acc_3', name: 'PNC', type: 'bank', balance: 0 },
+    { id: 'acc_4', name: 'Efectivo / Caja Chica', type: 'cash', balance: 0 }
+  ],
+  // Proyectos / Clientes
+  projects: [
+    { 
+      id: 'proj_1', client: 'Edgardo', name: 'Casa Lucera', 
+      totalFee: 4000, 
+      status: 'active',
+      payments: [] 
+    },
+    { 
+      id: 'proj_2', client: 'Edgardo', name: 'Otro Building', 
+      totalFee: 0, 
+      status: 'pending',
+      payments: [] 
+    },
+    { 
+      id: 'proj_3', client: 'Manuel Clemente', name: 'Proyecto Clemente', 
+      totalFee: 0, 
+      status: 'pending',
+      payments: [] 
+    }
+  ],
+  recurring: [
+    { id: 'rec_1', name: 'Disney Plus', amount: 12, day: 9, cat: 'Entretenimiento' },
+    { id: 'rec_2', name: 'Amazon Prime', amount: 17, day: 27, cat: 'Entretenimiento' },
+    { id: 'rec_3', name: 'Spectrum', amount: 30, day: 21, cat: 'Servicios' },
+    { id: 'rec_4', name: 'Hipoteca Orlando', amount: 2253, day: 18, cat: 'Hogar' },
+    { id: 'rec_5', name: 'Duke Energy', amount: 300, day: 2, cat: 'Hogar' },
+    { id: 'rec_6', name: 'T-Mobile', amount: 281, day: 3, cat: 'Hogar' }
+  ],
+  transactions: [] // Histórico
+};
+
+let state = loadState();
+let charts = {}; // Referencias a gráficas
+
+// --- UTILS ---
+const uid = () => Math.random().toString(36).substr(2, 9);
+const formatMoney = (n) => Number(n).toLocaleString('en-US', { style:'currency', currency:'USD' });
+const formatDate = (d) => new Date(d).toISOString().split('T')[0];
+
+function loadState() {
+  const s = localStorage.getItem('ah_finance_v2');
+  let data = s ? JSON.parse(s) : JSON.parse(JSON.stringify(SEED));
+  // Migration: Ensure profile exists if old data
+  if(!data.profile) data.profile = JSON.parse(JSON.stringify(SEED.profile));
+  return data;
+}
+function saveState() {
+  localStorage.setItem('ah_finance_v2', JSON.stringify(state));
+  renderProfile(); // Update Sidebar immediately
+  renderAll();
+}
+
+// --- CORE FUNCTIONS ---
+
+// Calcula balances actuales de cuentas
+function getAccountBalances() {
+  // Balance inicial + transacciones
+  const bals = {};
+  state.accounts.forEach(a => bals[a.id] = a.balance); // Start balance
+  
+  state.transactions.forEach(tx => {
+    const amt = Number(tx.amount);
+    if(tx.type === 'income' && tx.accountId) bals[tx.accountId] += amt;
+    if(tx.type === 'expense' && tx.accountId) bals[tx.accountId] -= amt;
+    if(tx.type === 'transfer' && tx.fromAccount && tx.toAccount) {
+      bals[tx.fromAccount] -= amt;
+      bals[tx.toAccount] += amt;
+    }
+  });
+  return bals;
+}
+
+// Datos para gráficas y KPIs
+function getDashboardMetrics(yyyymm) {
+  const [year, month] = yyyymm.split('-');
+  const start = new Date(year, month-1, 1);
+  const end = new Date(year, month, 0);
+
+  // Filtrar transacciones del mes
+  const monthlyTxs = state.transactions.filter(t => {
+    const d = new Date(t.date);
+    return d >= start && d <= end;
+  });
+
+  const income = monthlyTxs.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
+  const expense = monthlyTxs.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
+  
+  // Calcular Accounts Receivable (Total)
+  let totalPending = 0;
+  state.projects.forEach(p => {
+    const paid = p.payments.reduce((s, pay) => s + Number(pay.amount), 0);
+    totalPending += (p.totalFee - paid);
+  });
+
+  // Balances totales
+  const bals = getAccountBalances();
+  const totalLiquidity = Object.values(bals).reduce((s,v) => s + v, 0);
+
+  return { income, expense, totalLiquidity, totalPending, monthlyTxs };
+}
+
+/**
+ * ------------------------------------------------------------------
+ * UI RENDERING
+ * ------------------------------------------------------------------
+ */
+
+function renderProfile() {
+  const nameEl = document.getElementById('brandName');
+  const tagEl = document.getElementById('brandTagline');
+  if(nameEl && tagEl && state.profile) {
+    nameEl.innerHTML = `<i class="ri-building-2-line"></i> ${state.profile.name}`;
+    tagEl.innerText = state.profile.subtitle;
+  }
+}
+
+function renderAll() {
+  const currentMonth = document.getElementById('monthSelect').value || new Date().toISOString().slice(0,7);
+  
+  // 1. Dashboard Metrics
+  const metrics = getDashboardMetrics(currentMonth);
+  
+  document.getElementById('flowIn').innerText = formatMoney(metrics.income);
+  document.getElementById('flowPool').innerText = formatMoney(metrics.totalLiquidity);
+  document.getElementById('flowOut').innerText = formatMoney(metrics.expense);
+  
+  document.getElementById('flowPendingBadge').innerText = `Por cobrar: ${formatMoney(metrics.totalPending)}`;
+  document.getElementById('flowBurnRate').innerText = `Burn: ${formatMoney(metrics.expense)}`;
+
+  // 2. Gráficas
+  renderCharts(metrics.monthlyTxs);
+
+  // 3. Proyectos
+  renderProjects();
+
+  // 4. Cuentas
+  renderAccounts(getAccountBalances());
+
+  // 5. Transacciones
+  renderTransactions(metrics.monthlyTxs);
+
+  // 6. Recurring
+  renderRecurring();
+}
+
+function renderCharts(txs) {
+  // Chart Pie (Gastos por Categoria)
+  const cats = {};
+  txs.filter(t => t.type === 'expense').forEach(t => {
+    cats[t.category] = (cats[t.category] || 0) + Number(t.amount);
+  });
+  
+  if(charts.pie) charts.pie.destroy();
+  const ctxPie = document.getElementById('chartPie').getContext('2d');
+  charts.pie = new Chart(ctxPie, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(cats),
+      datasets: [{ data: Object.values(cats), backgroundColor: ['#ef4444','#f97316','#f59e0b','#10b981','#3b82f6','#6366f1'] }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'right' } } }
+  });
+
+  // Chart History (Simulado ultimo 6 meses)
+  // En una app real iteraríamos meses atrás. Aquí usamos datos dummy para visualización
+  // o calculamos real si existen datos.
+  if(charts.hist) charts.hist.destroy();
+  const ctxHist = document.getElementById('chartHistory').getContext('2d');
+  charts.hist = new Chart(ctxHist, {
+    type: 'bar',
+    data: {
+      labels: ['M-5', 'M-4', 'M-3', 'M-2', 'M-1', 'Actual'],
+      datasets: [
+        { label: 'Ingresos', data: [0,0,0,0,0, getDashboardMetrics(document.getElementById('monthSelect').value).income], backgroundColor: '#10b981' },
+        { label: 'Gastos', data: [0,0,0,0,0, getDashboardMetrics(document.getElementById('monthSelect').value).expense], backgroundColor: '#ef4444' }
+      ]
+    },
+    options: { responsive: true, scales: { x: { grid: {display:false} } } }
+  });
+}
+
+function renderProjects() {
+  const container = document.getElementById('projectsList');
+  container.innerHTML = '';
+  
+  let totalP = 0, totalC = 0;
+
+  state.projects.forEach(p => {
+    const paid = p.payments.reduce((s,pay) => s + Number(pay.amount), 0);
+    const pending = p.totalFee - paid;
+    
+    totalP += Number(p.totalFee);
+    totalC += paid;
+
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div class="card-header" style="margin-bottom:10px">
+        <div>
+           <div style="font-weight:700; font-size:16px; color:var(--brand)">${p.client}</div>
+           <div style="font-size:13px; color:var(--text-muted)">${p.name}</div>
+        </div>
+        <div class="text-right">
+           <div class="badge ${pending <= 0 ? 'green' : 'orange'}">${pending <= 0 ? 'COMPLETADO' : 'EN PROCESO'}</div>
+        </div>
+      </div>
+      
+      <div class="grid-3" style="background:var(--bg); padding:10px; border-radius:var(--radius); margin-bottom:15px">
+         <div class="text-center">
+            <div style="font-size:11px; color:var(--text-muted)">Total Honorarios</div>
+            <div style="font-weight:600">${formatMoney(p.totalFee)}</div>
+         </div>
+         <div class="text-center">
+            <div style="font-size:11px; color:var(--text-muted)">Pagado</div>
+            <div style="font-weight:600; color:var(--success)">${formatMoney(paid)}</div>
+         </div>
+         <div class="text-center">
+            <div style="font-size:11px; color:var(--text-muted)">Pendiente</div>
+            <div style="font-weight:600; color:${pending>0 ? 'var(--warning)' : 'var(--text-muted)'}">${formatMoney(pending)}</div>
+         </div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px; font-weight:600; margin-bottom:5px">Historial de Pagos</div>
+        ${p.payments.length === 0 ? '<div style="font-size:12px; font-style:italic; color:var(--text-muted)">No hay pagos registrados</div>' : ''}
+        ${p.payments.map(pay => `
+            <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0; border-bottom:1px solid var(--bg)">
+               <span>${formatDate(pay.date)} <span class="badge green" style="font-size:10px; padding:1px 5px">PAGADO</span></span>
+               <span>${formatMoney(pay.amount)}</span>
+            </div>
+        `).join('')}
+      </div>
+
+      <div class="text-right">
+         <button class="btn sm" onclick="deleteProject('${p.id}')">Eliminar</button>
+         <button class="btn sm primary" onclick="addPayment('${p.id}')">Registrar Pago</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+
+  document.getElementById('projTotal').innerText = formatMoney(totalP);
+  document.getElementById('projCollected').innerText = formatMoney(totalC);
+  document.getElementById('projPending').innerText = formatMoney(totalP - totalC);
+}
+
+function renderAccounts(balances) {
+  const grid = document.getElementById('accountsGrid');
+  grid.innerHTML = '';
+  state.accounts.forEach(acc => {
+    const bal = balances[acc.id] || 0;
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center">
+         <div>
+            <div style="font-weight:600; font-size:15px">${acc.name}</div>
+            <div class="badge blue">${acc.type}</div>
+         </div>
+         <div class="amount ${bal >= 0 ? 'pos' : 'neg'}" style="font-size:18px">${formatMoney(bal)}</div>
+      </div>
+      <div style="margin-top:10px; font-size:12px; color:var(--text-muted)">
+         Balance Inicial: ${formatMoney(acc.balance)}
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function renderTransactions(txs) {
+  const table = document.getElementById('txTable');
+  table.innerHTML = `
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Cuenta</th><th class="text-right">Monto</th><th></th></tr></thead>
+    <tbody>
+      ${txs.length === 0 ? '<tr><td colspan="7" class="text-center" style="padding:20px">Sin movimientos este mes</td></tr>' : ''}
+      ${txs.map(tx => {
+        const acc = state.accounts.find(a => a.id === tx.accountId);
+        return `
+        <tr>
+          <td>${formatDate(tx.date)}</td>
+          <td><span class="badge ${tx.type==='income'?'green':tx.type==='expense'?'red':'blue'}">${tx.type==='income'?'Ingreso':tx.type==='expense'?'Gasto':'Transf'}</span></td>
+          <td>${tx.description}</td>
+          <td><span style="font-size:11px; background:#f3f4f6; padding:2px 6px; border-radius:4px">${tx.category||'General'}</span></td>
+          <td>${acc ? acc.name : '-'}</td>
+          <td class="text-right amount ${tx.type==='income'?'pos':'neg'}">${formatMoney(tx.amount)}</td>
+          <td class="text-right"><button class="btn sm danger" onclick="deleteTx('${tx.id}')">×</button></td>
+        </tr>
+      `}).join('')}
+    </tbody>
+  `;
+}
+
+function renderRecurring() {
+  const list = document.getElementById('recurringList');
+  list.innerHTML = state.recurring.map(r => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--bg)">
+       <div>
+          <div style="font-weight:600">${r.name}</div>
+          <div style="font-size:12px; color:var(--text-muted)">Día ${r.day} del mes • ${r.cat}</div>
+       </div>
+       <div class="amount neg">${formatMoney(r.amount)}</div>
+    </div>
+  `).join('');
+}
+
+// --- INITIALIZATION ---
+(function init() {
+  // Populate Month Select
+  const sel = document.getElementById('monthSelect');
+  const now = new Date();
+  for(let i=0; i<12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const val = d.toISOString().slice(0,7);
+    const txt = d.toLocaleDateString('es-ES', { month:'long', year:'numeric' });
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.innerText = txt.charAt(0).toUpperCase() + txt.slice(1);
+    sel.appendChild(opt);
+  }
+  
+  renderProfile(); // Load profile name
+  renderAll();     // Load dashboard
+})();
+
+/**
+ * ------------------------------------------------------------------
+ * INTERACTIONS (Modals & Actions)
+ * ------------------------------------------------------------------
+ */
+ 
+const Modal = {
+  root: document.getElementById('modal-root'),
+  show(html) {
+    return new Promise(resolve => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `<div class="modal">${html}</div>`;
+      this.root.appendChild(overlay);
+      
+      // Focus first input
+      const input = overlay.querySelector('input');
+      if(input) input.focus();
+
+      // Anim
+      requestAnimationFrame(() => overlay.classList.add('open'));
+      
+      // Handlers
+      window.closeModal = (val) => {
+        overlay.classList.remove('open');
+        setTimeout(() => { overlay.remove(); resolve(val); }, 200);
+      };
+    });
+  },
+  async prompt(title, label) {
+    const res = await this.show(`
+      <h3>${title}</h3>
+      <div class="input-group">
+        <label class="input-label">${label}</label>
+        <input type="text" class="input" id="promptInput">
+      </div>
+      <div class="text-right">
+        <button class="btn" onclick="closeModal(null)">Cancelar</button>
+        <button class="btn primary" onclick="closeModal(document.getElementById('promptInput').value)">Guardar</button>
+      </div>
+    `);
+    return res;
+  }
+};
+
+// --- ACTIONS ---
+
+async function editProfile() {
+  const html = `
+    <h3>Editar Perfil de Empresa</h3>
+    <div class="input-group">
+       <label class="input-label">Nombre de la Empresa / Consultora</label>
+       <input class="input" id="profName" value="${state.profile.name}">
+    </div>
+    <div class="input-group">
+       <label class="input-label">Eslogan o Subtítulo</label>
+       <input class="input" id="profSub" value="${state.profile.subtitle}">
+    </div>
+    <div class="text-right">
+       <button class="btn" onclick="closeModal(null)">Cancelar</button>
+       <button class="btn primary" onclick="closeModal({
+         name: document.getElementById('profName').value,
+         subtitle: document.getElementById('profSub').value
+       })">Guardar Cambios</button>
+    </div>
+  `;
+  const res = await Modal.show(html);
+  if(res && res.name) {
+    state.profile.name = res.name;
+    state.profile.subtitle = res.subtitle;
+    saveState(); // Trigger save & render
+  }
+}
+
+async function addProject() {
+  const html = `
+    <h3>Nuevo Proyecto / Cliente</h3>
+    <div class="input-group">
+       <label class="input-label">Nombre del Cliente</label>
+       <input class="input" id="pClient" placeholder="Ej. Edgardo">
+    </div>
+    <div class="input-group">
+       <label class="input-label">Nombre del Proyecto</label>
+       <input class="input" id="pName" placeholder="Ej. Casa Lucera">
+    </div>
+    <div class="input-group">
+       <label class="input-label">Honorarios Totales ($)</label>
+       <input class="input" type="number" id="pFee" placeholder="0.00">
+    </div>
+    <div class="text-right">
+       <button class="btn" onclick="closeModal(null)">Cancelar</button>
+       <button class="btn primary" onclick="closeModal({
+         client: document.getElementById('pClient').value,
+         name: document.getElementById('pName').value,
+         fee: document.getElementById('pFee').value
+       })">Crear Proyecto</button>
+    </div>
+  `;
+  const res = await Modal.show(html);
+  if(res && res.client) {
+    state.projects.push({
+      id: uid(),
+      client: res.client,
+      name: res.name,
+      totalFee: Number(res.fee),
+      status: 'active',
+      payments: []
+    });
+    saveState();
+  }
+}
+
+async function addPayment(projId) {
+  const p = state.projects.find(x => x.id === projId);
+  const html = `
+    <h3>Registrar Pago: ${p.client}</h3>
+    <div class="input-group">
+       <label class="input-label">Monto Recibido ($)</label>
+       <input class="input" type="number" id="payAmount">
+    </div>
+    <div class="input-group">
+       <label class="input-label">Fecha</label>
+       <input class="input" type="date" id="payDate" value="${new Date().toISOString().slice(0,10)}">
+    </div>
+    <div class="input-group">
+       <label class="input-label">Depositar en Cuenta (Opcional)</label>
+       <select class="input" id="payAccount">
+         <option value="">-- Solo registrar en proyecto --</option>
+         ${state.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+       </select>
+    </div>
+    <div class="text-right">
+       <button class="btn" onclick="closeModal(null)">Cancelar</button>
+       <button class="btn primary" onclick="closeModal({
+          amount: document.getElementById('payAmount').value,
+          date: document.getElementById('payDate').value,
+          acc: document.getElementById('payAccount').value
+       })">Registrar</button>
+    </div>
+  `;
+  const res = await Modal.show(html);
+  if(res && res.amount) {
+    // 1. Add to project payments
+    p.payments.push({ id: uid(), amount: res.amount, date: res.date });
+    
+    // 2. If account selected, create transaction
+    if(res.acc) {
+      state.transactions.push({
+        id: uid(),
+        date: res.date,
+        type: 'income',
+        amount: Number(res.amount),
+        accountId: res.acc,
+        category: 'Proyectos',
+        description: `Pago: ${p.client} - ${p.name}`
+      });
+    }
+    saveState();
+  }
+}
+
+async function showTxModal() {
+  const html = `
+    <h3>Nueva Transacción</h3>
+    <div class="grid-2">
+       <div class="input-group">
+         <label class="input-label">Tipo</label>
+         <select class="input" id="txType">
+            <option value="expense">Gasto</option>
+            <option value="income">Ingreso</option>
+         </select>
+       </div>
+       <div class="input-group">
+         <label class="input-label">Monto</label>
+         <input type="number" class="input" id="txAmount">
+       </div>
+    </div>
+    <div class="input-group">
+       <label class="input-label">Descripción</label>
+       <input class="input" id="txDesc">
+    </div>
+    <div class="grid-2">
+       <div class="input-group">
+         <label class="input-label">Cuenta</label>
+         <select class="input" id="txAcc">
+            ${state.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+         </select>
+       </div>
+       <div class="input-group">
+         <label class="input-label">Fecha</label>
+         <input type="date" class="input" id="txDate" value="${new Date().toISOString().slice(0,10)}">
+       </div>
+    </div>
+    <div class="text-right">
+       <button class="btn" onclick="closeModal(null)">Cancelar</button>
+       <button class="btn primary" onclick="closeModal({
+          type: document.getElementById('txType').value,
+          amount: document.getElementById('txAmount').value,
+          desc: document.getElementById('txDesc').value,
+          acc: document.getElementById('txAcc').value,
+          date: document.getElementById('txDate').value
+       })">Guardar</button>
+    </div>
+  `;
+  const res = await Modal.show(html);
+  if(res && res.amount) {
+    state.transactions.push({
+      id: uid(),
+      type: res.type,
+      amount: Number(res.amount),
+      description: res.desc,
+      accountId: res.acc,
+      date: res.date,
+      category: 'Manual'
+    });
+    saveState();
+  }
+}
+
+function deleteProject(id) {
+  if(!confirm('¿Eliminar proyecto y su historial?')) return;
+  state.projects = state.projects.filter(p => p.id !== id);
+  saveState();
+}
+
+function deleteTx(id) {
+  if(!confirm('¿Eliminar transacción?')) return;
+  state.transactions = state.transactions.filter(t => t.id !== id);
+  saveState();
+}
+
+function applyRecurring() {
+  const month = document.getElementById('monthSelect').value;
+  const count = state.recurring.length;
+  // Simple logic: add them as pending transactions for the selected month
+  // For now, let's just add them as expenses dated the 1st of month
+  if(!confirm(`¿Generar ${count} transacciones de gastos recurrentes para este mes?`)) return;
+  
+  state.recurring.forEach(r => {
+    state.transactions.push({
+      id: uid(),
+      date: `${month}-${String(r.day).padStart(2,'0')}`,
+      type: 'expense',
+      amount: r.amount,
+      accountId: state.accounts[0].id, // Default to first account
+      category: r.cat,
+      description: r.name
+    });
+  });
+  saveState();
+  alert('Gastos recurrentes aplicados.');
+}
+
+// Navigation
+function setTab(id, el) {
+  document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+  document.getElementById('tab-'+id).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+// Data Mgmt & Exports
+function resetData() {
+  if(confirm('¿Borrar todos los datos y volver al inicio?')) {
+    localStorage.removeItem('ah_finance_v2');
+    location.reload();
+  }
+}
+function exportData() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+  const el = document.createElement('a');
+  el.setAttribute("href", dataStr);
+  el.setAttribute("download", "finanzas_backup.json");
+  document.body.appendChild(el);
+  el.click();
+  el.remove();
+}
+
+// Export to CSV (Excel)
+function exportToExcel() {
+  // CSV Header
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "Fecha,Tipo,Concepto,Categoria,Cuenta,Monto\n";
+
+  // Data rows
+  state.transactions.forEach(tx => {
+    const acc = state.accounts.find(a => a.id === tx.accountId)?.name || 'N/A';
+    const row = [
+       tx.date,
+       tx.type,
+       `"${tx.description.replace(/"/g, '""')}"`, // Escape quotes
+       tx.category,
+       acc,
+       tx.amount
+    ].join(",");
+    csvContent += row + "\n";
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "transacciones_excel.csv");
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+// Export to Fake Word (HTML Doc)
+function exportToWord() {
+  const monthSel = document.getElementById('monthSelect');
+  const monthText = monthSel.options[monthSel.selectedIndex].text;
+  const monthVal = monthSel.value;
+  
+  const metrics = getDashboardMetrics(monthVal);
+  const txs = metrics.monthlyTxs;
+  const companyName = state.profile.name; // Use editable name
+
+  const htmlDoc = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>Reporte Mensual</title>
+    <style>
+      body { font-family: Arial, sans-serif; }
+      table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+      th, td { border: 1px solid #999; padding: 8px; text-align: left; font-size: 12px; }
+      th { background-color: #eee; }
+      .header { text-align: center; margin-bottom: 30px; }
+      .summary { margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; background: #f9f9f9; }
+    </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Reporte Financiero Mensual</h1>
+        <h3>${companyName}</h3>
+        <p>Periodo: ${monthText}</p>
+      </div>
+
+      <div class="summary">
+        <p><strong>Ingresos Totales:</strong> ${formatMoney(metrics.income)}</p>
+        <p><strong>Gastos Totales:</strong> ${formatMoney(metrics.expense)}</p>
+        <p><strong>Balance del Periodo:</strong> ${formatMoney(metrics.income - metrics.expense)}</p>
+      </div>
+
+      <h3>Detalle de Transacciones</h3>
+      <table>
+        <thead>
+           <tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Monto</th></tr>
+        </thead>
+        <tbody>
+           ${txs.map(t => `
+             <tr>
+               <td>${t.date}</td>
+               <td>${t.type === 'income' ? 'Ingreso' : 'Gasto'}</td>
+               <td>${t.description}</td>
+               <td>${t.category||'General'}</td>
+               <td style="text-align:right">${formatMoney(t.amount)}</td>
+             </tr>
+           `).join('')}
+        </tbody>
+      </table>
+      <br>
+      <p style="font-size:10px; color:#666">Generado automáticamente por ${companyName} el ${new Date().toLocaleDateString()}</p>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff', htmlDoc], {
+      type: 'application/msword'
+  });
+  
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Reporte_Mensual_${monthVal}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+async function importData(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const text = await file.text();
+  try {
+    state = JSON.parse(text);
+    saveState();
+    alert('Datos importados correctamente.');
+  } catch(e) {
+    alert('Error al leer el archivo JSON.');
+  }
+}
+
+</script>
+</body>
+</html>
