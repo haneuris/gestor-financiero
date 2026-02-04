@@ -1069,6 +1069,7 @@ function updateMonthOptions() {
  
 const Modal = {
   root: document.getElementById('modal-root'),
+  
   show(html) {
     return new Promise(resolve => {
       const overlay = document.createElement('div');
@@ -1087,6 +1088,7 @@ const Modal = {
       };
     });
   },
+
   async prompt(title, label) {
     const res = await this.show(`
       <h3>${title}</h3>
@@ -1100,6 +1102,18 @@ const Modal = {
       </div>
     `);
     return res;
+  },
+
+  async confirm(msg) {
+    const res = await this.show(`
+      <h3>Confirmar Acción</h3>
+      <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px">${msg}</p>
+      <div class="text-right">
+        <button class="btn" onclick="closeModal(false)">Cancelar</button>
+        <button class="btn danger" onclick="closeModal(true)">Eliminar</button>
+      </div>
+    `);
+    return res === true;
   }
 };
 
@@ -1392,8 +1406,8 @@ async function editPayment(projId, payId) {
     }
 }
 
-function deletePayment(projId, payId) {
-    if (!confirm("¿Eliminar este pago? También se eliminará del registro de transacciones.")) return;
+async function deletePayment(projId, payId) {
+    if (!await Modal.confirm("¿Eliminar este pago? También se eliminará del registro de transacciones.")) return;
     
     const p = state.projects.find(x => x.id === projId);
     if (!p) return;
@@ -1555,8 +1569,8 @@ async function editAccount(id) {
   }
 }
 
-function deleteAccount(id) {
-  if(!confirm("¿Eliminar esta cuenta? Se recomienda solo si no tiene transacciones asociadas.")) return;
+async function deleteAccount(id) {
+  if(!await Modal.confirm("¿Eliminar esta cuenta? Se recomienda solo si no tiene transacciones asociadas.")) return;
   state.accounts = state.accounts.filter(a => a.id !== id);
   saveState();
 }
@@ -1669,32 +1683,42 @@ async function editRecurring(id) {
   }
 }
 
-function deleteProject(id) {
-  if(!confirm('¿Eliminar proyecto de la lista activa? (La gráfica se conservará en Análisis)')) return;
+// === FIX: Updated to also delete the graph ===
+async function deleteProject(id) {
+  if(!await Modal.confirm('¿Eliminar proyecto y su gráfica asociada? Esta acción no se puede deshacer.')) return;
+  
+  // 1. Remove project from active list
   state.projects = state.projects.filter(p => p.id !== id);
+  
+  // 2. Remove associated graph
+  if(state.clientGraphs) {
+      state.clientGraphs = state.clientGraphs.filter(g => g.linkedClientId !== id);
+  }
+  
   saveState();
 }
 
-function deleteGraph(id) {
-  if(!confirm('¿Eliminar esta gráfica y su historial visual?')) return;
+async function deleteGraph(id) {
+  if(!await Modal.confirm('¿Eliminar esta gráfica y su historial visual?')) return;
   state.clientGraphs = state.clientGraphs.filter(g => g.id !== id);
   saveState();
 }
 
-function deleteTx(id) {
-  if(!confirm('¿Eliminar transacción?')) return;
+async function deleteTx(id) {
+  if(!await Modal.confirm('¿Eliminar transacción?')) return;
   state.transactions = state.transactions.filter(t => t.id !== id);
   saveState();
 }
 
-function applyRecurring() {
+async function applyRecurring() {
   const year = document.getElementById('yearSelect').value;
   const month = document.getElementById('monthSelect').value;
   const count = state.recurring.length;
   
-  if(!confirm(`¿Generar ${count} transacciones de gastos recurrentes para este mes?`)) return;
+  if(!await Modal.confirm(`¿Generar ${count} transacciones de gastos recurrentes para este mes?`)) return;
   
   state.recurring.forEach(r => {
+    // Check if valid account exists, else use default
     const targetAcc = state.accounts.find(a => a.id === r.accountId) ? r.accountId : state.accounts[0].id;
     
     state.transactions.push({
@@ -1708,6 +1732,7 @@ function applyRecurring() {
     });
   });
   saveState();
+  // Using simple alert here is fine as success message, or could be replaced
   alert('Gastos recurrentes aplicados.');
 }
 
@@ -1732,8 +1757,8 @@ function setTab(id, el) {
 }
 
 // Data Mgmt & Exports
-function resetData() {
-  if(confirm('¿Borrar todos los datos y volver al inicio?')) {
+async function resetData() {
+  if(await Modal.confirm('¿Borrar todos los datos y volver al inicio?')) {
     localStorage.removeItem('ah_finance_v2');
     location.reload();
   }
