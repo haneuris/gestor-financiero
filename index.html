@@ -192,6 +192,10 @@
     }
     .btn.danger:hover { background: #fef2f2; }
     .btn.sm { padding: 4px 8px; font-size: 11px; }
+    .btn.success {
+      background: #ecfdf5; color: #166534; border-color: #bbf7d0;
+    }
+    .btn.success:hover { background: #d1fae5; }
 
     /* Inputs y Selects */
     .input-group { margin-bottom: 12px; }
@@ -251,6 +255,7 @@
     .badge.red { background: #fee2e2; color: #991b1b; }
     .badge.blue { background: #dbeafe; color: #1e40af; }
     .badge.orange { background: #ffedd5; color: #9a3412; }
+    .badge.gray { background: #f3f4f6; color: #6b7280; }
     
     .amount { font-family: var(--font-mono); font-weight: 600; }
     .amount.pos { color: var(--success); }
@@ -479,10 +484,10 @@
     <!-- RECURRING TAB -->
     <section id="tab-recurring" style="display:none">
       <div class="card-header">
-        <h2 class="card-title">Gastos Fijos y Recurrentes</h2>
-        <div>
-          <button class="btn" onclick="applyRecurring()"><i class="ri-play-list-add-line"></i> Aplicar al Mes Actual</button>
-          <button class="btn primary" onclick="addRecurring()"><i class="ri-add-line"></i> Nuevo Recurrente</button>
+        <h2 class="card-title">Gastos Fijos y Recurrentes (Planificación)</h2>
+        <div style="display:flex; align-items:center; gap:15px">
+            <div style="font-size:12px; color:var(--text-muted)">Mes seleccionado: <strong><span id="recurringMonthLabel"></span></strong></div>
+            <button class="btn primary" onclick="addRecurring()"><i class="ri-add-line"></i> Nuevo Recurrente</button>
         </div>
       </div>
       <div class="card">
@@ -1027,21 +1032,69 @@ function renderTransactions(txs) {
 
 function renderRecurring() {
   const list = document.getElementById('recurringList');
+  const y = document.getElementById('yearSelect').value;
+  const m = document.getElementById('monthSelect').value;
+  const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
+  
+  document.getElementById('recurringMonthLabel').innerText = `${monthLabel} ${y}`;
+  const prefix = `${y}-${String(m).padStart(2,'0')}`;
+
   list.innerHTML = state.recurring.map(r => {
     const acc = state.accounts.find(a => a.id === r.accountId);
+    
+    // Check status for this month
+    const tx = state.transactions.find(t => t.recurringId === r.id && t.date.startsWith(prefix));
+    const isPaid = !!tx;
+    
     return `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--bg)">
-       <div>
-          <div style="font-weight:600">${r.name}</div>
-          <div style="font-size:12px; color:var(--text-muted)">Día ${r.day} del mes • ${r.cat}</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 10px; border-bottom:1px solid var(--bg)">
+       <div style="flex:1">
+          <div style="font-weight:600">${r.name} <span class="badge ${isPaid ? 'green' : 'gray'}">${isPaid ? 'PAGADO' : 'PENDIENTE'}</span></div>
+          <div style="font-size:12px; color:var(--text-muted)">Día ${r.day} • ${r.cat}</div>
           <div style="font-size:11px; color:var(--brand); margin-top:2px"><i class="ri-bank-card-line"></i> ${acc ? acc.name : 'Sin Asignar'}</div>
        </div>
        <div style="text-align:right">
-          <div class="amount neg">${formatMoney(r.amount)}</div>
-          <button class="btn sm" onclick="editRecurring('${r.id}')" style="margin-top:5px; padding:2px 6px; font-size:10px">Editar</button>
+          <div class="amount neg" style="font-size:14px">${formatMoney(r.amount)}</div>
+          <div style="margin-top:6px; display:flex; gap:5px; justify-content:flex-end">
+             ${isPaid 
+                ? `<button class="btn sm danger" onclick="toggleRecurringPayment('${r.id}', false)">Anular</button>`
+                : `<button class="btn sm success" onclick="toggleRecurringPayment('${r.id}', true)">Pagar</button>`
+             }
+             <button class="btn sm" onclick="editRecurring('${r.id}')"><i class="ri-edit-2-line"></i></button>
+          </div>
        </div>
     </div>
   `}).join('');
+}
+
+async function toggleRecurringPayment(recId, pay) {
+    const y = document.getElementById('yearSelect').value;
+    const m = document.getElementById('monthSelect').value;
+    const prefix = `${y}-${String(m).padStart(2,'0')}`;
+    const r = state.recurring.find(x => x.id === recId);
+    
+    if(!r) return;
+
+    if(pay) {
+        // Create Transaction
+        const date = `${prefix}-${String(r.day).padStart(2,'0')}`;
+        state.transactions.push({
+            id: uid(),
+            date: date,
+            type: 'expense',
+            amount: r.amount,
+            accountId: r.accountId,
+            category: r.cat,
+            description: r.name,
+            recurringId: r.id
+        });
+    } else {
+        // Delete Transaction
+        if(!await Modal.confirm("¿Anular este pago? Se borrará de las transacciones.")) return;
+        state.transactions = state.transactions.filter(t => !(t.recurringId === recId && t.date.startsWith(prefix)));
+    }
+    
+    saveState();
 }
 
 // --- INITIALIZATION ---
@@ -1229,7 +1282,8 @@ async function addProject() {
         const txnId = uid();
         newProj.payments.push({ id: payId, amount: initialPay, date: date, transactionId: txnId });
         
-        // FIX: Always create transaction even if no account (null) to record income
+        // FIX: Always create Transaction (Income) even if no account linked
+        // If acc is empty string, accountId will be null/undefined, but Income is registered for Month Summary
         state.transactions.push({
             id: txnId,
             date: date,
@@ -1664,14 +1718,31 @@ async function addRecurring() {
   `;
   const res = await Modal.show(html);
   if(res && res.name) {
+      const recId = uid();
       state.recurring.push({
-          id: uid(),
+          id: recId,
           name: res.name,
           amount: Number(res.amount),
           day: Number(res.day),
           cat: res.cat,
           accountId: res.acc
       });
+      
+      // AUTO-ADD TRANSACTION FOR CURRENT MONTH
+      const y = document.getElementById('yearSelect').value;
+      const m = document.getElementById('monthSelect').value;
+      
+      state.transactions.push({
+        id: uid(),
+        date: `${y}-${String(m).padStart(2,'0')}-${String(res.day).padStart(2,'0')}`,
+        type: 'expense',
+        amount: Number(res.amount),
+        accountId: res.acc,
+        category: res.cat,
+        description: res.name,
+        recurringId: recId // Link to recurring
+      });
+
       saveState();
   }
 }
@@ -1720,7 +1791,18 @@ async function editRecurring(id) {
   `;
   const res = await Modal.show(html);
   if(res === 'delete') {
+      // Delete recurring item
       state.recurring = state.recurring.filter(x => x.id !== id);
+      
+      // AUTO-DELETE LINKED TRANSACTION IN CURRENT MONTH
+      const y = document.getElementById('yearSelect').value;
+      const m = document.getElementById('monthSelect').value;
+      const prefix = `${y}-${String(m).padStart(2,'0')}`;
+      
+      state.transactions = state.transactions.filter(t => 
+         !(t.recurringId === id && t.date.startsWith(prefix))
+      );
+      
       saveState();
   } else if(res && res.name) {
       r.name = res.name;
@@ -1728,6 +1810,19 @@ async function editRecurring(id) {
       r.day = Number(res.day);
       r.cat = res.cat;
       r.accountId = res.acc;
+      
+      // AUTO-UPDATE LINKED TRANSACTION IN CURRENT MONTH
+      const y = document.getElementById('yearSelect').value;
+      const m = document.getElementById('monthSelect').value;
+      const prefix = `${y}-${String(m).padStart(2,'0')}`;
+      
+      const tx = state.transactions.find(t => t.recurringId === id && t.date.startsWith(prefix));
+      if(tx) {
+          tx.amount = Number(res.amount);
+          tx.description = res.name;
+          tx.accountId = res.acc;
+      }
+      
       saveState();
   }
 }
