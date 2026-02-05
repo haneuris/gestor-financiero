@@ -604,7 +604,21 @@ let charts = {
 // --- UTILS ---
 const uid = () => Math.random().toString(36).substr(2, 9);
 const formatMoney = (n) => Number(n).toLocaleString('en-US', { style:'currency', currency:'USD' });
-const formatDate = (d) => new Date(d).toISOString().split('T')[0];
+
+// FIX: Generate Local Date String (YYYY-MM-DD) correctly for Inputs
+const getTodayISO = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const formatDate = (d) => {
+    if(!d) return '';
+    // Handle YYYY-MM-DD string
+    return d; 
+};
 
 function loadState() {
   const s = localStorage.getItem('ah_finance_v2');
@@ -656,15 +670,12 @@ function getAccountBalances() {
 }
 
 function getDashboardMetrics(year, month) {
-  // STRICT FILTERING: Only transactions within start and end date
-  const start = new Date(year, month-1, 1);
-  const end = new Date(year, month, 0);
+  // FIX: ROBUST STRING FILTERING to avoid timezone issues
+  const y = String(year);
+  const m = String(month).padStart(2, '0');
+  const targetPrefix = `${y}-${m}`;
 
-  const monthlyTxs = state.transactions.filter(t => {
-    const d = new Date(t.date);
-    // Be very precise with date comparison
-    return d >= start && d <= end;
-  });
+  const monthlyTxs = state.transactions.filter(t => t.date.startsWith(targetPrefix));
 
   const income = monthlyTxs.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
   const expense = monthlyTxs.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
@@ -741,6 +752,7 @@ function renderCharts(txs, year) {
   const monthlyIncome = Array(12).fill(0);
   const monthlyExpense = Array(12).fill(0);
 
+  // FIX: Also use string prefix check for year chart
   state.transactions.forEach(t => {
      if(t.date.startsWith(year)) {
         const m = parseInt(t.date.split('-')[1]) - 1; // 0-11
@@ -1207,7 +1219,7 @@ async function addProject() {
 
     if(initialPay > 0) {
         const payId = uid();
-        const date = new Date().toISOString().slice(0,10);
+        const date = getTodayISO();
         const txnId = uid();
         newProj.payments.push({ id: payId, amount: initialPay, date: date, transactionId: txnId });
         
@@ -1298,11 +1310,12 @@ async function editProject(id) {
       const diff = newPaidTotal - currentTotalPaid;
 
       if (diff !== 0) {
-          const date = new Date().toISOString().slice(0,10);
-          p.payments.push({ id: uid(), amount: diff, date: date });
+          const date = getTodayISO();
+          const txnId = uid();
+          p.payments.push({ id: uid(), amount: diff, date: date, transactionId: txnId });
           
           state.transactions.push({
-              id: uid(),
+              id: txnId,
               date: date,
               type: 'income',
               amount: diff,
@@ -1327,7 +1340,7 @@ async function addPayment(projId) {
     </div>
     <div class="input-group">
        <label class="input-label">Fecha</label>
-       <input class="input" type="date" id="payDate" value="${new Date().toISOString().slice(0,10)}">
+       <input class="input" type="date" id="payDate" value="${getTodayISO()}">
     </div>
     <div class="input-group">
        <label class="input-label">Depositar en Cuenta (Opcional)</label>
@@ -1453,7 +1466,7 @@ async function showTxModal() {
        </div>
        <div class="input-group">
          <label class="input-label">Fecha</label>
-         <input type="date" class="input" id="txDate" value="${new Date().toISOString().slice(0,10)}">
+         <input type="date" class="input" id="txDate" value="${getTodayISO()}">
        </div>
     </div>
     <div class="text-right">
@@ -1708,6 +1721,16 @@ async function deleteGraph(id) {
 
 async function deleteTx(id) {
   if(!await Modal.confirm('¿Eliminar transacción?')) return;
+  
+  // Check if tx is linked to a project payment and remove it there too
+  const tx = state.transactions.find(t => t.id === id);
+  if(tx && tx.projectId) {
+     const p = state.projects.find(proj => proj.id === tx.projectId);
+     if(p) {
+         p.payments = p.payments.filter(pay => pay.transactionId !== id);
+     }
+  }
+
   state.transactions = state.transactions.filter(t => t.id !== id);
   saveState();
 }
