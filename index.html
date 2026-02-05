@@ -625,31 +625,67 @@ const formatDate = (d) => {
     return d; 
 };
 
+// === SMART MIGRATION LOADER ===
 function loadState() {
   const s = localStorage.getItem('ah_finance_v2');
-  let data = s ? JSON.parse(s) : JSON.parse(JSON.stringify(SEED));
-  if(!data.profile) data.profile = JSON.parse(JSON.stringify(SEED.profile));
+  let localData = s ? JSON.parse(s) : null;
   
-  if(!data.clientGraphs) data.clientGraphs = [];
+  if (!localData) {
+      return JSON.parse(JSON.stringify(SEED));
+  }
+
+  // --- MIGRATION LOGIC ---
   
-  // Ensure every project has a graph entry
-  data.projects.forEach(p => {
-      const exists = data.clientGraphs.find(g => g.linkedClientId === p.id);
-      if(!exists) {
-          data.clientGraphs.push({
+  // 1. Merge Profile: Keep local if modified, but ensure object exists
+  localData.profile = localData.profile || JSON.parse(JSON.stringify(SEED.profile));
+
+  // 2. Merge Accounts: Add new accounts from SEED if missing in local
+  SEED.accounts.forEach(seedAcc => {
+      if (!localData.accounts.find(a => a.id === seedAcc.id)) {
+          localData.accounts.push(seedAcc);
+      }
+  });
+
+  // 3. Merge Projects: Add new default projects from SEED if missing in local
+  SEED.projects.forEach(seedProj => {
+      const localProj = localData.projects.find(p => p.id === seedProj.id);
+      if (!localProj) {
+          localData.projects.push(seedProj);
+      } else {
+         // ensure fields exist
+         if(localProj.notes === undefined) localProj.notes = seedProj.notes || "";
+         if(localProj.payments === undefined) localProj.payments = [];
+      }
+  });
+
+  // 4. Merge Recurring
+  SEED.recurring.forEach(seedRec => {
+      if (!localData.recurring.find(r => r.id === seedRec.id)) {
+          localData.recurring.push(seedRec);
+      }
+  });
+
+  // 5. Ensure clientGraphs structure exists and is synced
+  if (!localData.clientGraphs) localData.clientGraphs = [];
+  
+  // Sync graphs for all current projects in localData
+  localData.projects.forEach(p => {
+      const hasGraph = localData.clientGraphs.find(g => g.linkedClientId === p.id);
+      if (!hasGraph) {
+          localData.clientGraphs.push({
               id: 'graph_' + p.id,
               title: `${p.client} - ${p.name}`,
               linkedClientId: p.id
           });
       }
   });
-  
-  data.recurring.forEach(r => {
-      if(!r.accountId) r.accountId = data.accounts[0].id;
-  });
 
-  return data;
+  // 6. Ensure transactions array exists
+  if (!localData.transactions) localData.transactions = [];
+
+  return localData;
 }
+
 function saveState() {
   localStorage.setItem('ah_finance_v2', JSON.stringify(state));
   renderProfile();
@@ -658,15 +694,18 @@ function saveState() {
 
 // --- CORE FUNCTIONS ---
 
+// FIX: ROBUST BALANCE CALCULATION
 function getAccountBalances() {
   const bals = {};
-  state.accounts.forEach(a => bals[a.id] = a.balance);
   
+  // 1. Set Initial Balances (Ensure numbers)
+  state.accounts.forEach(a => bals[a.id] = Number(a.balance));
+  
+  // 2. Apply Transactions
   state.transactions.forEach(tx => {
     const amt = Number(tx.amount);
-    // Be tolerant of missing accountIds
     const accId = tx.accountId;
-    if(!accId) return; // Skip if no account associated
+    if(!accId) return; 
 
     if(tx.type === 'income') bals[accId] += amt;
     if(tx.type === 'expense') bals[accId] -= amt;
@@ -973,6 +1012,8 @@ function renderAccounts(balances) {
   grid.innerHTML = '';
   state.accounts.forEach(acc => {
     const bal = balances[acc.id] || 0;
+    const initial = Number(acc.balance || 0); // Explicitly display initial balance too
+    
     const div = document.createElement('div');
     div.className = 'card';
     div.innerHTML = `
@@ -982,15 +1023,16 @@ function renderAccounts(balances) {
             <div class="badge blue">${acc.type}</div>
          </div>
          <div style="text-align:right">
-            <div class="amount ${bal >= 0 ? 'pos' : 'neg'}" style="font-size:18px">${formatMoney(bal)}</div>
+            <div class="amount ${bal >= 0 ? 'pos' : 'neg'}" style="font-size:18px" title="Balance Actual = Inicial + Ingresos - Gastos">${formatMoney(bal)}</div>
             <div style="margin-top:5px">
                <button class="btn sm" onclick="editAccount('${acc.id}')" title="Editar Cuenta"><i class="ri-pencil-line"></i></button>
                <button class="btn sm danger" onclick="deleteAccount('${acc.id}')" title="Eliminar Cuenta"><i class="ri-delete-bin-line"></i></button>
             </div>
          </div>
       </div>
-      <div style="margin-top:10px; font-size:12px; color:var(--text-muted)">
-         Balance Inicial: ${formatMoney(acc.balance)}
+      <div style="margin-top:10px; font-size:12px; color:var(--text-muted); border-top:1px solid var(--bg); padding-top:5px; display:flex; justify-content:space-between;">
+         <span>Balance Inicial Configurado:</span>
+         <strong>${formatMoney(initial)}</strong>
       </div>
     `;
     grid.appendChild(div);
@@ -1082,7 +1124,7 @@ async function toggleRecurringPayment(recId, pay) {
             id: uid(),
             date: date,
             type: 'expense',
-            amount: r.amount,
+            amount: Number(r.amount), // Ensure number
             accountId: r.accountId,
             category: r.cat,
             description: r.name,
