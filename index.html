@@ -359,7 +359,7 @@
         <div class="arch-box source">
           <div class="arch-label">Fuentes (Clientes)</div>
           <div class="arch-val" id="flowIn">$0.00</div>
-          <div style="font-size:12px; color:var(--text-muted)">Proyectos cobrados este mes</div>
+          <div style="font-size:12px; color:var(--text-muted)">Cobrado (Solo mes seleccionado)</div>
           <div style="margin-top:8px">
              <span class="badge orange" id="flowPendingBadge">Pend: $0</span>
           </div>
@@ -383,7 +383,7 @@
         <div class="arch-box drain">
           <div class="arch-label">Salidas (Gastos)</div>
           <div class="arch-val" id="flowOut">$0.00</div>
-          <div style="font-size:12px; color:var(--text-muted)">Gastos del mes seleccionado</div>
+          <div style="font-size:12px; color:var(--text-muted)">Gastos (Solo mes seleccionado)</div>
           <div style="margin-top:8px">
              <span class="badge red" id="flowBurnRate">Burn Rate</span>
           </div>
@@ -400,7 +400,7 @@
         </div>
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Desglose de Gastos</h3>
+            <h3 class="card-title">Desglose de Gastos (Mes Seleccionado)</h3>
           </div>
           <canvas id="chartPie"></canvas>
         </div>
@@ -656,11 +656,13 @@ function getAccountBalances() {
 }
 
 function getDashboardMetrics(year, month) {
+  // STRICT FILTERING: Only transactions within start and end date
   const start = new Date(year, month-1, 1);
   const end = new Date(year, month, 0);
 
   const monthlyTxs = state.transactions.filter(t => {
     const d = new Date(t.date);
+    // Be very precise with date comparison
     return d >= start && d <= end;
   });
 
