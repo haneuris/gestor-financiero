@@ -625,50 +625,41 @@ const formatDate = (d) => {
     return d; 
 };
 
-// === SMART MIGRATION LOADER ===
+// === SMART MIGRATION LOADER (FIXED) ===
 function loadState() {
   const s = localStorage.getItem('ah_finance_v2');
   let localData = s ? JSON.parse(s) : null;
   
+  // IF NO LOCAL DATA, USE SEED
   if (!localData) {
-      return JSON.parse(JSON.stringify(SEED));
+      // Add graphs to initial seed
+      let seedData = JSON.parse(JSON.stringify(SEED));
+      seedData.projects.forEach(p => {
+          seedData.clientGraphs.push({
+              id: 'graph_' + p.id,
+              title: `${p.client} - ${p.name}`,
+              linkedClientId: p.id
+          });
+      });
+      return seedData;
   }
 
-  // --- MIGRATION LOGIC ---
+  // IF LOCAL DATA EXISTS, RESPECT DELETIONS
+  // DO NOT RE-ADD ITEMS FROM SEED IF THEY ARE MISSING IN LOCAL
   
-  // 1. Merge Profile: Keep local if modified, but ensure object exists
+  // 1. Merge Profile (Properties Only)
   localData.profile = localData.profile || JSON.parse(JSON.stringify(SEED.profile));
 
-  // 2. Merge Accounts: Add new accounts from SEED if missing in local
-  SEED.accounts.forEach(seedAcc => {
-      if (!localData.accounts.find(a => a.id === seedAcc.id)) {
-          localData.accounts.push(seedAcc);
-      }
-  });
-
-  // 3. Merge Projects: Add new default projects from SEED if missing in local
-  SEED.projects.forEach(seedProj => {
-      const localProj = localData.projects.find(p => p.id === seedProj.id);
-      if (!localProj) {
-          localData.projects.push(seedProj);
-      } else {
-         // ensure fields exist
-         if(localProj.notes === undefined) localProj.notes = seedProj.notes || "";
-         if(localProj.payments === undefined) localProj.payments = [];
-      }
-  });
-
-  // 4. Merge Recurring
-  SEED.recurring.forEach(seedRec => {
-      if (!localData.recurring.find(r => r.id === seedRec.id)) {
-          localData.recurring.push(seedRec);
-      }
-  });
-
-  // 5. Ensure clientGraphs structure exists and is synced
+  // 2. Ensure structures exist
+  if (!localData.accounts) localData.accounts = [];
+  if (!localData.projects) localData.projects = [];
+  if (!localData.recurring) localData.recurring = [];
   if (!localData.clientGraphs) localData.clientGraphs = [];
-  
-  // Sync graphs for all current projects in localData
+  if (!localData.transactions) localData.transactions = [];
+
+  // 3. Only Sync Graphs for EXISTING projects in localData
+  // This ensures if user created a project but graph was missing (legacy), it gets added
+  // BUT if project was deleted, we do NOT add a graph
   localData.projects.forEach(p => {
       const hasGraph = localData.clientGraphs.find(g => g.linkedClientId === p.id);
       if (!hasGraph) {
@@ -679,9 +670,6 @@ function loadState() {
           });
       }
   });
-
-  // 6. Ensure transactions array exists
-  if (!localData.transactions) localData.transactions = [];
 
   return localData;
 }
